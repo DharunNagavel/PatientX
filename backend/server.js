@@ -2,11 +2,34 @@ import express from "express";
 import {PORT} from "./config/env.js";
 import pool from "./db.js";
 import cors from 'cors';
-import authRouter from './routes/auth.route';
+import session from 'express-session';
+import bodyParser from 'body-parser';
+import connectPgSimple from 'connect-pg-simple';
+import authRouter from './routes/auth.route.js';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+const PgSession = connectPgSimple(session);
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(session({
+    store: new PgSession({
+      pool: pool,          
+      tableName: 'session',
+      createTableIfMissing: true, 
+    }),
+    secret: 'your_secret_key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: 
+    {
+      maxAge: 24 * 60 * 60 * 1000,
+      secure: false,
+      httpOnly: true
+    }
+  })
+);
 app.use('/api/auth',authRouter);
 
 pool.connect().then(()=>{
