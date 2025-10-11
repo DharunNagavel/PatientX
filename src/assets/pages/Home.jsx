@@ -71,7 +71,7 @@ const Home = () => {
 
   return (
     <>
-      <section className="relative bg-gradient-to-r from-[#0a2647] via-[#144272] to-[#205295] text-white min-h-screen flex items-center justify-center px-6 md:px-20 overflow-hidden">
+      <section className="relative bg-blue-500 text-white min-h-screen flex items-center justify-center px-6 md:px-20 overflow-hidden">
         <div className="max-w-7xl mx-auto grid md:grid-cols-2 items-center gap-10">
           <div className="space-y-6">
             <h1 className="text-4xl md:text-5xl font-bold leading-tight">
@@ -84,18 +84,15 @@ const Home = () => {
             <div className="flex gap-4 pt-4">
               <button
                 onClick={scrollToCards}
-                className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg shadow-lg transition"
+                className="bg-black hover:bg-white hover:text-black text-white font-semibold px-6 py-3 rounded-lg shadow-lg transition"
               >
                 Get Started
-              </button>
-              <button className="border border-blue-400 hover:bg-blue-500 hover:text-white font-semibold px-6 py-3 rounded-lg transition">
-                Learn More
               </button>
             </div>
           </div>
           <div className="flex justify-center md:justify-end">
             <img
-              src="/heroImage.png"
+              src="/image.png"
               alt="Hero Illustration"
               className="w-[420px] md:w-[520px] lg:w-[600px] object-contain"
               loading="lazy"
