@@ -29,7 +29,7 @@ const Navbar = () => {
   ];
 
   return (
-    <nav className="fixed top-0 left-0 w-full z-50 bg-blue-500 text-white shadow-lg transition-all duration-500">
+    <nav className="fixed left-0 w-full z-50 bg-blue-500 text-white border-b-2 rounded-4xl top-1 shadow-lg transition-all duration-500">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center py-3">
         <div className="flex items-center gap-3">
           <img
