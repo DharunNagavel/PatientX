@@ -6,6 +6,7 @@ import session from 'express-session';
 import bodyParser from 'body-parser';
 import connectPgSimple from 'connect-pg-simple';
 import authRouter from './routes/auth.route.js';
+import dataRouter from "./routes/data.route.js";
 
 const app = express();
 app.use(cors());
@@ -14,6 +15,7 @@ const PgSession = connectPgSimple(session);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/api/auth',authRouter);
+app.use('/api/block/data',dataRouter);
 
 pool.connect().then(()=>{
       console.log("Connected to PostgreSQL")

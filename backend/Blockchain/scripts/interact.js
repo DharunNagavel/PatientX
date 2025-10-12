@@ -1,41 +1,28 @@
-const hre = require("hardhat");
-const CryptoJS = require("crypto-js");
+const { ethers } = require("hardhat");
 
-const SECRET_KEY = "mySecretKey123";
-
-function encryptData(data) {
-    return CryptoJS.AES.encrypt(data, SECRET_KEY).toString(); // Base64 string
-}
-
-function decryptData(encryptedData) {
-    const bytes = CryptoJS.AES.decrypt(encryptedData, SECRET_KEY);
-    return bytes.toString(CryptoJS.enc.Utf8);
-}
+// Replace with your deployed contract address
+const CONTRACT_ADDRESS = "0xYourDeployedContractAddressHere";
 
 async function main() {
-    const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+  const [owner, user1] = await ethers.getSigners();
 
-    const SimpleStorage = await hre.ethers.getContractFactory("SimpleStorage");
-    const simpleStorage = SimpleStorage.attach(contractAddress);
+  const ConsentRegistry = await ethers.getContractFactory("ConsentRegistry");
+  const consentRegistry = await ConsentRegistry.attach(CONTRACT_ADDRESS);
 
-    // Encrypt
-    const plainText = "Hello Blockchain!";
-    const encrypted = encryptData(plainText); // string
+  // 1. Store data hash
+  const dataHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("MySecretData"));
+  let tx = await consentRegistry.connect(owner).storeData(dataHash);
+  await tx.wait();
+  console.log("Data stored with hash:", dataHash);
 
-    // Store as string (no Buffer!)
-    const tx = await simpleStorage.setData(encrypted);
-    await tx.wait();
-    console.log("Encrypted data stored!");
+  // 2. Grant consent to user1
+  tx = await consentRegistry.connect(owner).grantConsent(dataHash, user1.address);
+  await tx.wait();
+  console.log("Consent granted to:", user1.address);
 
-    // Retrieve encrypted string
-    const storedDataStr = await simpleStorage.getData();
-
-    // Decrypt
-    const decrypted = decryptData(storedDataStr);
-    console.log("Decrypted data:", decrypted);
+  // 3. Check consent
+  const hasConsent = await consentRegistry.checkConsent(dataHash, user1.address);
+  console.log("Does user1 have consent?", hasConsent);
 }
 
-main().catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-});
+main().catch(console.error);
