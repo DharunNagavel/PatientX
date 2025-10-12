@@ -1,7 +1,5 @@
-"use client";
-
 import React, { useState, useRef, useEffect } from "react";
-import gsap from "gsap";
+import {gsap} from "gsap";
 
 const Records = () => {
   const [records, setRecords] = useState([]);
