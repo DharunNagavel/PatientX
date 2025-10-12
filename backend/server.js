@@ -13,23 +13,6 @@ app.use(express.json());
 const PgSession = connectPgSimple(session);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(session({
-    store: new PgSession({
-      pool: pool,          
-      tableName: 'session',
-      createTableIfMissing: true, 
-    }),
-    secret: 'your_secret_key',
-    resave: false,
-    saveUninitialized: false,
-    cookie: 
-    {
-      maxAge: 24 * 60 * 60 * 1000,
-      secure: false,
-      httpOnly: true
-    }
-  })
-);
 app.use('/api/auth',authRouter);
 
 pool.connect().then(()=>{

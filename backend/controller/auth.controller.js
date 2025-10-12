@@ -1,5 +1,8 @@
 import bcrypt from 'bcryptjs';
 import pool from '../db.js';
+import JWT from 'jsonwebtoken';
+import { JWT_SECRET, JWT_EXPIRES_IN } from "../config/env.js";
+
 export const signup = async (req, res) => {
   const { username, mail, phone, password, role } = req.body;
   try 
@@ -10,14 +13,14 @@ export const signup = async (req, res) => {
             return res.send({ message: 'User already exists' });
         }
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = await pool.query(
-      'INSERT INTO users (username, mail, phone, password, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, mail',
+    await pool.query(
+      'INSERT INTO users (username, mail, phone, password, role) VALUES ($1, $2, $3, $4, $5)',
       [username, mail, phone, hashedPassword, role]
     );
-    req.session.userId = newUser.rows[0].id;
+    const token = JWT.sign({ mail }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
     res.send({
       message: 'User registered and logged in successfully',
-      userId: req.session.userId,
+      token,
     });
   } catch (err) {
     console.log(err);
@@ -37,10 +40,10 @@ export const signin = async (req, res) => {
     if (!validPassword) {
       return res.send({ message: 'Invalid password' });
     }
-    req.session.userId = user.id;
+    const token = JWT.sign({ mail }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
     res.send({
       message: 'Login successful',
-      userId: req.session.userId,
+      token,
     });
   } 
   catch (err) 
@@ -49,11 +52,14 @@ export const signin = async (req, res) => {
   }
 };
 
-export const signout = (req, res) => 
-{
-  req.session.destroy(err => {
-    if (err) return res.send('Logout failed');
-    res.clearCookie('connect.sid');
-    res.send('Logged out successfully');
-  });
+export const signout = async (req, res) => 
+  {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (token) 
+  {
+    const decoded = JWT.decode(token);
+    const exp = decoded?.exp ? decoded.exp - Math.floor(Date.now() / 1000) : 3600;
+    await redis.set(token, 'blacklisted', 'EX', exp); 
+  }
+  res.json('Logged out successfully');
 };
