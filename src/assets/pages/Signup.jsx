@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import axios from "axios";
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -8,7 +9,6 @@ const Signup = () => {
     name: "",
     email: "",
     password: "",
-    confirmPassword: "",
     phone: "",
   });
 
@@ -21,14 +21,26 @@ const Signup = () => {
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match!");
-      return;
-    }
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (formData.password !== formData.confirmPassword) {
+    alert("Passwords do not match!");
+    return;
+  }
+
+  try {
+    // Send data with correct field names for backend
+    await axios.post("http://localhost:9000/api/auth/signup", {
+      username: formData.name,     // Backend expects 'username'
+      mail: formData.email,        // Backend expects 'mail'
+      password: formData.password,
+      phone: formData.phone,
+      role: formData.role
+    });
+    
     console.log("Signup data:", formData);
     alert("Signup successful!");
+    
     setFormData({
       role: "Patient",
       name: "",
@@ -37,7 +49,12 @@ const Signup = () => {
       confirmPassword: "",
       phone: "",
     });
-  };
+    
+  } catch (error) {
+    console.error("Signup error:", error);
+    alert("Signup failed! Please try again.");
+  }
+};
 
   const goToLogin = () => {
     navigate("/login");

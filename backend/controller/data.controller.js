@@ -12,34 +12,51 @@ function generateHash(data) {
   return "0x" + crypto.createHash("sha256").update(data).digest("hex");
 }
 
-// Store data + metadata
+// Store data + metadata - UPDATED FOR FRONTEND
 export const storeData = async (req, res) => {
   try {
-    const { userId, data } = req.body;
+    const { userId, type, fileNames, rate, notes } = req.body;
     
-    if (!userId || !data) {
-      return res.status(400).json({ error: "userId and data are required" });
+    if (!userId || !type) {
+      return res.status(400).json({ error: "userId and type are required" });
     }
 
-    const hash = generateHash(data);
+    // Create the medical record structure from frontend fields
+    const medicalRecord = {
+      recordType: type,
+      files: fileNames || [],
+      rate: parseInt(rate) || 0,
+      notes: notes || "",
+      createdAt: new Date().toISOString()
+    };
+
+    // Convert to string for blockchain storage
+    const dataString = JSON.stringify(medicalRecord);
+    const hash = generateHash(dataString);
     const accountIndex = parseInt(userId) - 1;
     
-    console.log(`💾 Storing data for user ${userId} using account index ${accountIndex}`);
+    console.log(`💾 Storing medical record for user ${userId}`);
+    console.log(`📋 Record Type: ${type}`);
+    console.log(`📁 Files: ${fileNames?.length || 0} files`);
+    console.log(`💰 Rate: ₹${rate}`);
 
-    const blockchainResult = await storeDataOnBlockchain(data, accountIndex);
+    // Store on blockchain
+    const blockchainResult = await storeDataOnBlockchain(dataString, accountIndex);
 
-    // Store in database - without id column (auto-increment removed)
+    // Store in database
     await pool.query(
       "INSERT INTO records (user_id, data_hash, data_value, blockchain_txn, blockchain_owner) VALUES ($1, $2, $3, $4, $5)",
-      [userId, hash, data, blockchainResult.transactionHash, blockchainResult.owner]
+      [userId, hash, dataString, blockchainResult.transactionHash, blockchainResult.owner]
     );
 
     res.json({ 
-      message: "Data stored successfully", 
+      success: true,
+      message: "Medical record stored successfully", 
       txnHash: blockchainResult.transactionHash,
       dataHash: hash,
       owner: blockchainResult.owner,
-      userAccount: `Account ${accountIndex}`
+      userAccount: `Account ${accountIndex}`,
+      record: medicalRecord
     });
   } catch (err) {
     console.error(err);
@@ -271,5 +288,92 @@ export const getData = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error: " + err.message });
+  }
+};
+
+// Get user's stored data
+export const getUserData = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    console.log(`📁 Getting data for user: ${userId}`);
+
+    const result = await pool.query(
+      "SELECT data_hash, data_value, created_at FROM records WHERE user_id=$1 ORDER BY created_at DESC",
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      userData: result.rows,
+      total: result.rowCount
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error: " + err.message });
+  }
+};
+
+// Get blockchain status
+export const getBlockchainStatus = async (req, res) => {
+  try {
+    const accountInfo = await getAccountInfo();
+    
+    const userMapping = accountInfo.accounts.map((account, index) => ({
+      userId: index + 1,
+      accountIndex: index,
+      address: account.address,
+      balance: "10000 ETH"
+    }));
+
+    res.json({
+      success: true,
+      userMapping: userMapping,
+      totalAccounts: accountInfo.totalAccounts,
+      contractAddress: process.env.CONTRACT_ADDRESS
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error: " + err.message });
+  }
+};
+
+// DECLINE CONSENT - Data owner declines a request
+export const declineConsent = async (req, res) => {
+  try {
+    const { ownerId, requestId } = req.body;
+
+    console.log(`❌ Declining consent for request: ${requestId} by owner: ${ownerId}`);
+
+    if (!ownerId || !requestId) {
+      return res.status(400).json({ 
+        error: "ownerId and requestId are required"
+      });
+    }
+
+    // Update consent request status to declined
+    const result = await pool.query(
+      "UPDATE consent_requests SET status='declined', granted_at=$1 WHERE id=$2 AND owner_id=$3",
+      [new Date(), requestId, ownerId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ 
+        message: "Consent request not found"
+      });
+    }
+
+    console.log(`✅ Consent declined for request: ${requestId}`);
+
+    res.json({ 
+      success: true,
+      message: "Consent declined successfully", 
+      requestId: requestId
+    });
+  } catch (err) {
+    console.error('❌ Error in declineConsent:', err);
+    res.status(500).json({ 
+      error: "Server error: " + err.message
+    });
   }
 };

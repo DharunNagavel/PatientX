@@ -5,6 +5,7 @@ import {
   grantConsent,
   requestConsent,
   getPendingRequests,
+  declineConsent
 } from "../controller/data.controller.js";
 
 const router = express.Router();
@@ -20,6 +21,8 @@ router.post("/request-consent", requestConsent);
 
 // Grant consent (approve a request)
 router.post("/grant-consent", grantConsent);
+
+router.post('/decline-consent', declineConsent);
 
 // Get pending consent requests for a data owner
 router.get("/pending-requests/:ownerId", getPendingRequests);
