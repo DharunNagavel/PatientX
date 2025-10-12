@@ -7,8 +7,6 @@ import { gsap } from "gsap";
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const mobileMenuRef = useRef(null);
-
-  // GSAP animation for mobile menu
   useEffect(() => {
     if (mobileMenuRef.current) {
       gsap.to(mobileMenuRef.current, {
@@ -39,8 +37,6 @@ const Navbar = () => {
           />
           <h1 className="text-lg sm:text-2xl font-bold">PatientX</h1>
         </div>
-
-        {/* Desktop Menu */}
         <ul className="hidden lg:flex gap-6 text-base sm:text-lg items-center font-medium">
           {menuItems.map((item, i) => (
             <li key={i}>
@@ -53,8 +49,6 @@ const Navbar = () => {
             </li>
           ))}
         </ul>
-
-        {/* Mobile Menu Button */}
         <button
           className="lg:hidden p-2 rounded-lg text-white"
           onClick={() => setIsOpen(!isOpen)}
@@ -62,8 +56,6 @@ const Navbar = () => {
           {isOpen ? <X size={28} /> : <Menu size={28} />}
         </button>
       </div>
-
-      {/* Mobile Menu */}
       <div
         ref={mobileMenuRef}
         className="lg:hidden px-4 overflow-hidden h-0 opacity-0 bg-blue-500 text-white"
