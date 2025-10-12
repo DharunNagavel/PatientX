@@ -1,11 +1,28 @@
-import { Router } from "express";
-import {storeData,getData,grantConsent} from "../controller/data.controller.js"
+import express from "express";
+import {
+  storeData,
+  getData,
+  grantConsent,
+  requestConsent,
+  getPendingRequests,
+} from "../controller/data.controller.js";
 
-const dataRouter = Router();
+const router = express.Router();
 
-dataRouter.post('/storedata',storeData);
-dataRouter.get('/getdata/:id',getData);
-dataRouter.post("/grantConsent/:id", grantConsent);
+// Store data
+router.post("/storedata", storeData);
+
+// Get specific data (with consent check)
+router.get("/getdata/:dataHash", getData);
+
+// Request consent to access someone's data
+router.post("/request-consent", requestConsent);
+
+// Grant consent (approve a request)
+router.post("/grant-consent", grantConsent);
+
+// Get pending consent requests for a data owner
+router.get("/pending-requests/:ownerId", getPendingRequests);
 
 
-export default dataRouter;
+export default router;
