@@ -55,7 +55,7 @@ const Records = () => {
 
       // Prepare data for backend
       const requestData = {
-        userId: "1", // TODO: Get from user authentication
+        userId: "1", 
         type: newRecord.type,
         fileNames: newRecord.fileNames,
         rate: newRecord.rate,

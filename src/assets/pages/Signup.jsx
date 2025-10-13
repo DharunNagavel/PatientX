@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import axios from "axios";
+import { nav } from "framer-motion/client";
 
-const Signup = () => {
+const Signup = ({setrole}) => {
   const [formData, setFormData] = useState({
-    role: "Patient", 
+    role: "", 
     name: "",
     email: "",
     password: "",
@@ -30,7 +31,7 @@ const Signup = () => {
 
   try {
     // Send data with correct field names for backend
-    await axios.post("http://localhost:9000/api/auth/signup", {
+    const res = await axios.post("http://localhost:9000/api/auth/signup", {
       username: formData.name,     // Backend expects 'username'
       mail: formData.email,        // Backend expects 'mail'
       password: formData.password,
@@ -42,14 +43,15 @@ const Signup = () => {
     alert("Signup successful!");
     
     setFormData({
-      role: "Patient",
+      role: "",
       name: "",
       email: "",
       password: "",
       confirmPassword: "",
       phone: "",
     });
-    
+    setrole(res.data.role);
+    navigate("/");
   } catch (error) {
     console.error("Signup error:", error);
     alert("Signup failed! Please try again.");
