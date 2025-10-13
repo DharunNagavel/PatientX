@@ -10,11 +10,13 @@ import Login from "./assets/pages/Login";
 import Profile from "./assets/pages/Profile";
 import Researcher_consent from "./assets/pages/Researcher_consent";
 import Researcher_records from "./assets/pages/Researcher_records";
+import Researcher_profile from "./assets/pages/Researcher_profile";
 import { useState } from "react";
+import { i } from "framer-motion/client";
 
 function Layout({ children, role }) {
   const location = useLocation();
-  const hideNavbar = ["/login", "/signup", "/profile"];
+  const hideNavbar = ["/login", "/signup", "/profile", "/researcher_profile"];
   const hideFooter = ["/login", "/signup"];
 
   return (
@@ -37,6 +39,7 @@ function App() {
           
           <Route path="/researcher_consent" element={<Researcher_consent />} />
           <Route path="/researcher_records" element={<Researcher_records />} />
+          <Route path="/researcher_profile" element={<Researcher_profile />} />
           <Route path="/records" element={<Records role={role}/>} />
           <Route path="/research" element={<Research role={role} />} />
           <Route path="/consent" element={<Consent role={role} />} />
