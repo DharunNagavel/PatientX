@@ -8,6 +8,8 @@ import Consent from "./assets/pages/Consent";
 import Signup from "./assets/pages/Signup";
 import Login from "./assets/pages/Login";
 import Profile from "./assets/pages/Profile";
+import Researcher_consent from "./assets/pages/Researcher_consent";
+import Researcher_records from "./assets/pages/Researcher_records";
 
 function Layout({ children }) {
   const location = useLocation();
@@ -35,6 +37,8 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/login" element={<Login />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/researcher_consent" element={<Researcher_consent />} />
+          <Route path="/researcher_records" element={<Researcher_records />} />
         </Routes>
       </Layout>
     </BrowserRouter>
