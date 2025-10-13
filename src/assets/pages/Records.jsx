@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-import {gsap} from "gsap";
+import { gsap } from "gsap";
+import axios from "axios";
 
 const Records = () => {
   const [records, setRecords] = useState([]);
@@ -43,28 +44,70 @@ const Records = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (newRecord.files === 0) {
-      alert("Please upload at least one file.");
-      return;
+    
+    try {
+      if (newRecord.files === 0) {
+        alert("Please upload at least one file.");
+        return;
+      }
+
+      // Prepare data for backend
+      const requestData = {
+        userId: "1", // TODO: Get from user authentication
+        type: newRecord.type,
+        fileNames: newRecord.fileNames,
+        rate: newRecord.rate,
+        notes: newRecord.notes
+      };
+
+      // Send to backend
+      const response = await fetch('http://localhost:9000/api/block/data/storedata', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        // Success - show success message
+        alert('✅ Medical record stored on blockchain successfully!');
+        console.log('Blockchain Transaction:', result.txnHash);
+        console.log('Data Hash:', result.dataHash);
+        
+        // Also add to local state for UI display
+        const recordToAdd = {
+          ...newRecord,
+          id: Date.now(),
+          date: new Date().toISOString().split("T")[0],
+          blockchainHash: result.dataHash,
+          transactionHash: result.txnHash
+        };
+        setRecords([...records, recordToAdd]);
+        
+        // Reset form
+        setNewRecord({
+          type: "",
+          files: 0,
+          rate: "",
+          notes: "",
+          filesData: [],
+          fileNames: [],
+        });
+        setShowModal(false);
+      } else {
+        alert('❌ Error: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error storing data:', error);
+      alert('Failed to store medical record');
     }
-    const recordToAdd = {
-      ...newRecord,
-      id: Date.now(),
-      date: new Date().toISOString().split("T")[0],
-    };
-    setRecords([...records, recordToAdd]);
-    setNewRecord({
-      type: "",
-      files: 0,
-      rate: "",
-      notes: "",
-      filesData: [],
-      fileNames: [],
-    });
-    setShowModal(false);
   };
+
   return (
     <div className="min-h-screen bg-black text-white">
       <nav className="fixed top-0 left-0 w-full h-16 bg-gray-900 text-white z-40 shadow-md flex items-center px-6">
@@ -107,6 +150,11 @@ const Records = () => {
                 <p className="text-gray-400">
                   <strong>Rate:</strong> ₹{record.rate}
                 </p>
+                {record.blockchainHash && (
+                  <p className="text-gray-500 text-xs mt-2">
+                    <strong>Blockchain:</strong> {record.blockchainHash.substring(0, 10)}...
+                  </p>
+                )}
                 <div className="absolute inset-0 bg-gray-900 bg-opacity-95 flex flex-col items-center justify-start text-center p-4 rounded-xl opacity-0 scale-95 transition-all duration-300 group-hover:opacity-100 group-hover:scale-100 z-10 overflow-auto max-h-96">
                   {record.fileNames.length > 0 && (
                     <div className="grid grid-cols-2 gap-2 mb-4 w-full">
@@ -130,6 +178,11 @@ const Records = () => {
                     </p>
                     {record.notes && (
                       <p className="text-gray-400 mt-1">{record.notes}</p>
+                    )}
+                    {record.blockchainHash && (
+                      <p className="text-green-400 text-xs mt-2">
+                        <strong>On Blockchain:</strong> ✓
+                      </p>
                     )}
                   </div>
                 </div>
@@ -218,7 +271,7 @@ const Records = () => {
                 type="submit"
                 className="w-full bg-blue-500 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold transition"
               >
-                Add Record
+                Add Record to Blockchain
               </button>
             </form>
           </div>

@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import axios from "axios";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
 const Login = () => {
   const [formData, setFormData] = useState({
-    email: "",
+    mail: "",
     password: "",
   });
 
@@ -16,14 +17,23 @@ const Login = () => {
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Login data:", formData);
-    alert("Login successful!");
-    setFormData({
-      email: "",
-      password: "",
-    });
+
+    try {
+      const res = await axios.post("http://localhost:9000/api/auth/signin", formData);
+      console.log("Login data:", res.data);
+      alert("Login successful!");
+      // You can redirect based on role here if needed
+      // navigate("/dashboard");
+      setFormData({
+        mail: "",
+        password: "",
+      });
+    } catch (err) {
+      console.error("Login error:", err);
+      alert(err.response?.data?.error || "Login failed!");
+    }
   };
 
   const goToSignup = () => {
@@ -51,14 +61,15 @@ const Login = () => {
             <label className="block mb-1">Email</label>
             <input
               type="email"
-              name="email"
-              value={formData.email}
+              name="mail"
+              value={formData.mail}
               onChange={handleChange}
               required
               className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="you@example.com"
             />
           </div>
+
           <div className="relative">
             <label className="block mb-1">Password</label>
             <input
@@ -78,6 +89,7 @@ const Login = () => {
               {showPassword ? "Hide" : "Show"}
             </button>
           </div>
+
           <button
             type="submit"
             className="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded-lg font-semibold transition"

@@ -1,44 +1,46 @@
-import React from "react";
-const researchersData = [
-  {
-    id: 1,
-    name: "Dr. Alice Sharma",
-    profilePic: "/alice.jpg",
-    field: "Cardiology",
-    institution: "Heart Care Hospital",
-    ongoingResearch: [
-      "AI-based heart disease prediction",
-      "Blood pressure variability study",
-    ],
-    contact: "alice@example.com",
-  },
-  {
-    id: 2,
-    name: "Dr. Rajesh Kumar",
-    profilePic: "/rajesh.jpg",
-    field: "Neurology",
-    institution: "Neuro Health Center",
-    ongoingResearch: [
-      "Brain scan pattern recognition",
-      "Neurodegenerative disease monitoring",
-    ],
-    contact: "rajesh@example.com",
-  },
-  {
-    id: 3,
-    name: "Dr. Meera Nair",
-    profilePic: "/meera.jpg",
-    field: "Oncology",
-    institution: "Cancer Care Institute",
-    ongoingResearch: [
-      "Early cancer detection using AI",
-      "Chemotherapy outcome prediction",
-    ],
-    contact: "meera@example.com",
-  },
-];
+import React, { useState, useEffect } from "react";
 
 const Research = () => {
+  const [researchersData, setResearchersData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchResearchers = async () => {
+      try {
+        const response = await fetch('http://localhost:9000/api/researchersdata');
+        if (!response.ok) {
+          throw new Error('Failed to fetch researchers');
+        }
+        const data = await response.json();
+        setResearchersData(data);
+      } catch (err) {
+        setError(err.message);
+        console.error('Error fetching researchers:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchResearchers();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-xl">Loading researchers...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-xl text-red-500">Error: {error}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="pt-24 px-6 max-w-5xl mx-auto">
@@ -52,7 +54,6 @@ const Research = () => {
               <div className="relative z-0 flex flex-col items-center">
                 <img
                   src={researcher.profilePic}
-                  alt={researcher.name}
                   className="w-24 h-24 rounded-full mx-auto mb-4 object-cover"
                 />
                 <h2 className="text-xl font-semibold text-center">{researcher.name}</h2>
@@ -62,9 +63,13 @@ const Research = () => {
               <div className="absolute inset-0 bg-gray-900 bg-opacity-95 p-4 rounded-xl opacity-0 translate-y-full group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 flex flex-col items-center justify-start overflow-auto max-h-96 z-10">
                 <h3 className="font-bold text-lg mb-2">Ongoing Research</h3>
                 <ul className="list-disc list-inside text-gray-300 text-sm">
-                  {researcher.ongoingResearch.map((topic, i) => (
-                    <li key={i}>{topic}</li>
-                  ))}
+                  {Array.isArray(researcher.ongoingResearch) ? (
+                    researcher.ongoingResearch.map((topic, i) => (
+                      <li key={i}>{topic}</li>
+                    ))
+                  ) : (
+                    <li>{researcher.ongoingResearch}</li>
+                  )}
                 </ul>
                 <p className="mt-4 text-gray-400 text-sm">
                   Contact: {researcher.contact}
@@ -77,4 +82,5 @@ const Research = () => {
     </div>
   );
 };
+
 export default Research;
