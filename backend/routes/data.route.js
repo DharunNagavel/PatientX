@@ -5,7 +5,8 @@ import {
   grantConsent,
   requestConsent,
   getPendingRequests,
-  declineConsent
+  declineConsent,
+  getUserRecords
 } from "../controller/data.controller.js";
 
 const router = express.Router();
@@ -18,6 +19,8 @@ router.get("/getdata/:dataHash", getData);
 
 // Request consent to access someone's data
 router.post("/request-consent", requestConsent);
+
+router.get("/user/:user_id",getUserRecords);
 
 // Grant consent (approve a request)
 router.post("/grant-consent", grantConsent);
