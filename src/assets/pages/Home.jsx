@@ -1,8 +1,9 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useLayoutEffect } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
+
 const features = [
   {
     title: "Data Ownership",
@@ -33,26 +34,30 @@ const features = [
 const Home = () => {
   const sectionRef = useRef(null);
   const cardRefs = useRef([]);
+  const ctxRef = useRef(null); 
 
   const scrollToCards = () => {
-    sectionRef.current.scrollIntoView({ behavior: "smooth" });
+    sectionRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  useEffect(() => {
-    const ctx = gsap.context(() => {
+  useLayoutEffect(() => {
+    ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+    
+    ctxRef.current = gsap.context(() => {
       const totalCards = cardRefs.current.length;
 
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: sectionRef.current,
           start: "top top",
-          end: `+=${totalCards * 120}%`, 
+          end: `+=${totalCards * 120}%`,
           scrub: true,
           pin: true,
         },
       });
+
       cardRefs.current.forEach((card, i) => {
-        if (i < totalCards - 1) {
+        if (card && i < totalCards - 1) {
           tl.to(
             card,
             {
@@ -60,13 +65,18 @@ const Home = () => {
               opacity: 0,
               ease: "none",
             },
-            i 
+            i
           );
         }
       });
     }, sectionRef);
 
-    return () => ctx.revert();
+    return () => {
+      if (ctxRef.current) {
+        ctxRef.current.revert();
+      }
+      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+    };
   }, []);
 
   return (
@@ -100,6 +110,7 @@ const Home = () => {
           </div>
         </div>
       </section>
+
       <section
         ref={sectionRef}
         className="relative bg-black h-screen overflow-hidden"

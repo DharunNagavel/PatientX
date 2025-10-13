@@ -11,10 +11,7 @@ import Profile from "./assets/pages/Profile";
 
 function Layout({ children }) {
   const location = useLocation();
-
-  // Pages where Navbar should be hidden
   const hideNavbar = ["/login", "/signup", "/profile"];
-  // Pages where Footer should be hidden
   const hideFooter = ["/login", "/signup"];
 
   return (
