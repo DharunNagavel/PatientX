@@ -12,19 +12,46 @@ function generateHash(data) {
   return "0x" + crypto.createHash("sha256").update(data).digest("hex");
 }
 
-// Store data + metadata - UPDATED FOR FRONTEND
+// Store data + metadata - UPDATED TO STORE FILE CONTENT
 export const storeData = async (req, res) => {
   try {
-    const { userId, type, fileNames, rate, notes } = req.body;
+    const { userId, type, rate, notes, files: fileData } = req.body;
     
     if (!userId || !type) {
       return res.status(400).json({ error: "userId and type are required" });
     }
 
-    // Create the medical record structure from frontend fields
+    // Handle file content from request
+    const files = [];
+    
+    // If files are sent as base64 encoded content in the request body
+    if (fileData && Array.isArray(fileData)) {
+      fileData.forEach(file => {
+        files.push({
+          fileName: file.fileName,
+          content: file.content, // base64 encoded file content
+          mimeType: file.mimeType || 'application/octet-stream',
+          size: file.size || 0
+        });
+      });
+    }
+
+    // If files are uploaded via multipart/form-data (if you configure multer)
+    if (req.files && Array.isArray(req.files)) {
+      req.files.forEach(file => {
+        files.push({
+          fileName: file.originalname,
+          content: file.buffer.toString('base64'), // Convert buffer to base64
+          mimeType: file.mimetype,
+          size: file.size
+        });
+      });
+    }
+
+    // Create the medical record structure with actual file content
     const medicalRecord = {
       recordType: type,
-      files: fileNames || [],
+      files: files,
       rate: parseInt(rate) || 0,
       notes: notes || "",
       createdAt: new Date().toISOString()
@@ -37,7 +64,7 @@ export const storeData = async (req, res) => {
     
     console.log(`💾 Storing medical record for user ${userId}`);
     console.log(`📋 Record Type: ${type}`);
-    console.log(`📁 Files: ${fileNames?.length || 0} files`);
+    console.log(`📁 Files: ${files.length} files with actual content`);
     console.log(`💰 Rate: ₹${rate}`);
 
     // Store on blockchain
@@ -56,7 +83,15 @@ export const storeData = async (req, res) => {
       dataHash: hash,
       owner: blockchainResult.owner,
       userAccount: `Account ${accountIndex}`,
-      record: medicalRecord
+      record: {
+        ...medicalRecord,
+        files: medicalRecord.files.map(f => ({ 
+          fileName: f.fileName, 
+          size: f.size,
+          mimeType: f.mimeType 
+          // Don't send back the actual content in response
+        }))
+      }
     });
   } catch (err) {
     console.error(err);
@@ -229,9 +264,25 @@ export const getPendingRequests = async (req, res) => {
       [ownerId]
     );
 
+    // Parse the data_value to include record info without file content
+    const pendingRequests = result.rows.map(row => {
+      const recordData = JSON.parse(row.data_value);
+      return {
+        ...row,
+        recordInfo: {
+          recordType: recordData.recordType,
+          fileCount: recordData.files ? recordData.files.length : 0,
+          fileNames: recordData.files ? recordData.files.map(f => f.fileName) : [],
+          rate: recordData.rate,
+          notes: recordData.notes,
+          createdAt: recordData.createdAt
+        }
+      };
+    });
+
     res.json({
       success: true,
-      pendingRequests: result.rows,
+      pendingRequests: pendingRequests,
       total: result.rowCount
     });
   } catch (err) {
@@ -259,6 +310,9 @@ export const getData = async (req, res) => {
 
     const record = result.rows[0];
     
+    // Parse the stored JSON data
+    const storedData = JSON.parse(record.data_value);
+    
     // Get requester's Ethereum address
     const accounts = await getAccountInfo();
     const requesterAccountIndex = parseInt(requesterId) - 1;
@@ -280,57 +334,10 @@ export const getData = async (req, res) => {
     }
 
     res.json({ 
-      data: record.data_value,
+      data: storedData,
       dataOwner: record.user_id,
       consentVerified: true,
       dataHash: record.data_hash
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error: " + err.message });
-  }
-};
-
-// Get user's stored data
-export const getUserData = async (req, res) => {
-  try {
-    const { userId } = req.params;
-
-    console.log(`📁 Getting data for user: ${userId}`);
-
-    const result = await pool.query(
-      "SELECT data_hash, data_value, created_at FROM records WHERE user_id=$1 ORDER BY created_at DESC",
-      [userId]
-    );
-
-    res.json({
-      success: true,
-      userData: result.rows,
-      total: result.rowCount
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error: " + err.message });
-  }
-};
-
-// Get blockchain status
-export const getBlockchainStatus = async (req, res) => {
-  try {
-    const accountInfo = await getAccountInfo();
-    
-    const userMapping = accountInfo.accounts.map((account, index) => ({
-      userId: index + 1,
-      accountIndex: index,
-      address: account.address,
-      balance: "10000 ETH"
-    }));
-
-    res.json({
-      success: true,
-      userMapping: userMapping,
-      totalAccounts: accountInfo.totalAccounts,
-      contractAddress: process.env.CONTRACT_ADDRESS
     });
   } catch (err) {
     console.error(err);
@@ -374,6 +381,90 @@ export const declineConsent = async (req, res) => {
     console.error('❌ Error in declineConsent:', err);
     res.status(500).json({ 
       error: "Server error: " + err.message
+    });
+  }
+};
+
+// Get user's stored records
+export const getUserRecords = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+
+    console.log(`📁 Getting records for user: ${user_id}`);
+
+    if (!user_id) {
+      return res.status(400).json({ 
+        error: "User ID is required" 
+      });
+    }
+
+    const userExists = await pool.query(
+  "SELECT 1 FROM users WHERE user_id=$1", [user_id]);
+if (userExists.rowCount === 0) {  // Check if no rows returned
+  return res.status(404).json({ 
+    success: false,
+    error: "User not found",
+    details: `User with ID ${user_id} does not exist`
+  });
+}
+
+    // Get user's records from database
+    const result = await pool.query(
+      `SELECT data_hash, data_value, created_at, blockchain_txn, blockchain_owner 
+       FROM records 
+       WHERE user_id = $1 
+       ORDER BY created_at DESC`,
+      [user_id]
+    );
+
+    console.log(`✅ Found ${result.rowCount} records for user ${user_id}`);
+
+    // Parse each record's data_value and format the response
+    const userData = result.rows.map(row => {
+      try {
+        const data = JSON.parse(row.data_value);
+        return {
+          data_hash: row.data_hash,
+          created_at: row.created_at,
+          blockchain_txn: row.blockchain_txn,
+          blockchain_owner: row.blockchain_owner,
+          recordType: data.recordType,
+          files: data.files ? data.files.map(f => ({
+            fileName: f.fileName,
+            size: f.size,
+            mimeType: f.mimeType
+            // Don't include actual file content in list view
+          })) : [],
+          rate: data.rate,
+          notes: data.notes,
+          createdAt: data.createdAt
+        };
+      } catch (parseError) {
+        console.error('Error parsing record data:', parseError);
+        return {
+          data_hash: row.data_hash,
+          created_at: row.created_at,
+          blockchain_txn: row.blockchain_txn,
+          recordType: 'Unknown',
+          files: [],
+          rate: 0,
+          notes: 'Error parsing record data',
+          createdAt: row.created_at
+        };
+      }
+    });
+
+    res.json({
+      success: true,
+      userData: userData,
+      total: result.rowCount,
+      userId: user_id
+    });
+  } catch (err) {
+    console.error('❌ Error in getUserRecords:', err);
+    res.status(500).json({ 
+      success: false,
+      error: "Server error: " + err.message 
     });
   }
 };

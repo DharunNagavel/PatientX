@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import pool from '../db.js';
 import JWT from 'jsonwebtoken';
 import { JWT_SECRET, JWT_EXPIRES_IN } from "../config/env.js";
+import { u } from 'framer-motion/client';
 
 export const signup = async (req, res) => {
   const { username, mail, phone, password, role } = req.body;
@@ -17,12 +18,14 @@ export const signup = async (req, res) => {
       'INSERT INTO users (username, mail, phone, password, role) VALUES ($1, $2, $3, $4, $5)',
       [username, mail, phone, hashedPassword, role]
     );
+    const user = await pool.query('SELECT * FROM users WHERE mail = $1', [mail]);
     const token = JWT.sign({ mail }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
     res.send({
       message: 'User registered and logged in successfully',
       token,
       role : role,
-      username : username
+      username : username,
+      user_id: user.user_id
     });
   } catch (err) {
     console.log(err);
@@ -30,6 +33,7 @@ export const signup = async (req, res) => {
 };
 
 export const signin = async (req, res) => {
+  console.log("Signin request body:", req.body);
   const { mail, password} = req.body;
   try {
     const result = await pool.query('SELECT * FROM users WHERE mail = $1', [mail]);
@@ -47,7 +51,8 @@ export const signin = async (req, res) => {
       message: 'Login successful',
       token,
       role : user.role,
-      username : user.username
+      username : user.username,
+      user_id: user.user_id
     });
   } 
   catch (err) 

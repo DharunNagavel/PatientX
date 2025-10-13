@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-const Consent = () => {
+const Consent = ({user_id}) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -9,7 +9,7 @@ const Consent = () => {
   const fetchPendingRequests = async () => {
     try {
       // Replace '1' with the actual ownerId (you might get this from authentication)
-      const ownerId = 1; // This should be dynamic based on logged-in user
+      const ownerId = user_id; // This should be dynamic based on logged-in user
       
       const response = await fetch(`http://localhost:9000/api/block/data/pending-requests/${ownerId}`);
       

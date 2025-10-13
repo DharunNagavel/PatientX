@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
-const Login = ({setrole}) => {
+const Login = ({setrole,setuser_id}) => {
   const [formData, setFormData] = useState({
     mail: "",
     password: "",
@@ -17,24 +17,37 @@ const Login = ({setrole}) => {
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+ const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    try {
-      const res = await axios.post("http://localhost:9000/api/auth/signin", formData);
-      console.log("Login data:", res.data);
-      alert("Login successful!");
-      setFormData({
-        mail: "",
-        password: "",
-      });
-      setrole(res.data.role);
-      navigate("/");
-    } catch (err) {
-      console.error("Login error:", err);
-      alert(err.response?.data?.error || "Login failed!");
+  try {
+    const res = await axios.post("http://localhost:9000/api/auth/signin", formData);
+    console.log("Login data:", res);
+    
+    // Handle string error responses
+    if (res.data === "User does not exist") {
+      alert("User does not exist. Please check your email or sign up.");
+      return;
     }
-  };
+    if (res.data === "Invalid password" || res.data === "Wrong password") {
+      alert("Invalid password. Please try again.");
+      return;
+    }
+    
+    // Handle successful login (response should be an object with user data)
+    alert("Login successful!");
+    setFormData({
+      mail: "",
+      password: "",
+    });
+    setrole(res.data.role);
+    setuser_id(res.data.user_id);
+    navigate("/");
+  } catch (err) {
+    console.error("Login error:", err);
+    alert(err.response?.data?.error || "Login failed!");
+  }
+};
 
   const goToSignup = () => {
     navigate("/signup");

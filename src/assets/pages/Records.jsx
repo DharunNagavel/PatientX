@@ -1,10 +1,10 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { gsap } from "gsap";
-import axios from "axios";
 
-const Records = () => {
+const Records = ({ user_id }) => {
   const [records, setRecords] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [newRecord, setNewRecord] = useState({
     type: "",
     files: 0,
@@ -15,6 +15,15 @@ const Records = () => {
   });
 
   const cardsRef = useRef([]);
+
+  // Fetch user's records when component mounts or user_id changes
+  useEffect(() => {
+    if (user_id) {
+      fetchUserRecords();
+    }
+  }, [user_id]);
+
+  // Animation effect
   useEffect(() => {
     if (records.length > 0) {
       const lastCard = cardsRef.current[cardsRef.current.length - 1];
@@ -27,6 +36,52 @@ const Records = () => {
       }
     }
   }, [records]);
+
+  // Fetch user's records from backend
+  const fetchUserRecords = async () => {
+    try {
+      setLoading(true);
+      console.log(`🔄 Fetching records for user: ${user_id}`);
+      
+      const response = await fetch(`http://localhost:9000/api/block/data/user/${user_id}`);
+      
+      console.log('Response status:', response.status);
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('API Response:', result);
+        
+        if (result.success) {
+          // Transform backend data to match frontend format
+          const transformedRecords = result.userData.map(record => ({
+            id: record.data_hash, // Use data_hash as unique ID
+            type: record.recordType,
+            files: record.files.length,
+            rate: record.rate,
+            notes: record.notes,
+            date: record.created_at || record.createdAt,
+            blockchainHash: record.data_hash,
+            fileNames: record.files.map(f => f.fileName),
+          }));
+          console.log('Transformed records:', transformedRecords);
+          setRecords(transformedRecords);
+        } else {
+          console.error('API returned success: false', result);
+          setRecords([]);
+        }
+      } else {
+        console.error('HTTP Error:', response.status);
+        // If endpoint doesn't exist yet, show empty state
+        setRecords([]);
+      }
+    } catch (error) {
+      console.error('Error fetching records:', error);
+      // On network error, show empty state
+      setRecords([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -53,14 +108,34 @@ const Records = () => {
         return;
       }
 
+      // Convert files to base64 for backend
+      const filePromises = newRecord.filesData.map(file => {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            resolve({
+              fileName: file.name,
+              content: reader.result.split(',')[1], // Remove data URL prefix
+              mimeType: file.type,
+              size: file.size
+            });
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+
+      const filesData = await Promise.all(filePromises);
+
       // Prepare data for backend
       const requestData = {
-        userId: "1", 
+        userId: user_id, 
         type: newRecord.type,
-        fileNames: newRecord.fileNames,
         rate: newRecord.rate,
-        notes: newRecord.notes
+        notes: newRecord.notes,
+        files: filesData
       };
+
+      console.log('Sending data to backend:', { ...requestData, files: filesData.length });
 
       // Send to backend
       const response = await fetch('http://localhost:9000/api/block/data/storedata', {
@@ -79,15 +154,8 @@ const Records = () => {
         console.log('Blockchain Transaction:', result.txnHash);
         console.log('Data Hash:', result.dataHash);
         
-        // Also add to local state for UI display
-        const recordToAdd = {
-          ...newRecord,
-          id: Date.now(),
-          date: new Date().toISOString().split("T")[0],
-          blockchainHash: result.dataHash,
-          transactionHash: result.txnHash
-        };
-        setRecords([...records, recordToAdd]);
+        // Refresh records from backend to include the new one
+        await fetchUserRecords();
         
         // Reset form
         setNewRecord({
@@ -127,10 +195,21 @@ const Records = () => {
             + New Record
           </button>
         </div>
-        {records.length === 0 ? (
-          <p className="text-gray-400 text-center mt-20 text-lg">
-            No health data uploaded
-          </p>
+
+        {loading ? (
+          <div className="flex justify-center items-center mt-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <p className="ml-4 text-gray-400">Loading your records...</p>
+          </div>
+        ) : records.length === 0 ? (
+          <div className="text-center mt-20">
+            <p className="text-gray-400 text-lg mb-4">
+              No health data uploaded
+            </p>
+            <p className="text-gray-500 text-sm">
+              Click "+ New Record" to add your first medical record
+            </p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {records.map((record, index) => (
@@ -157,15 +236,15 @@ const Records = () => {
                 )}
                 <div className="absolute inset-0 bg-gray-900 bg-opacity-95 flex flex-col items-center justify-start text-center p-4 rounded-xl opacity-0 scale-95 transition-all duration-300 group-hover:opacity-100 group-hover:scale-100 z-10 overflow-auto max-h-96">
                   {record.fileNames.length > 0 && (
-                    <div className="grid grid-cols-2 gap-2 mb-4 w-full">
-                      {record.filesData.map((file, i) => (
-                        <img
-                          key={i}
-                          src={URL.createObjectURL(file)}
-                          alt={file.name}
-                          className="w-full h-32 object-contain rounded-lg"
-                        />
-                      ))}
+                    <div className="mb-4 w-full">
+                      <p className="text-white font-bold mb-2">Files:</p>
+                      <div className="space-y-1">
+                        {record.fileNames.map((fileName, i) => (
+                          <p key={i} className="text-gray-400 text-sm bg-gray-800 p-2 rounded">
+                            📄 {fileName}
+                          </p>
+                        ))}
+                      </div>
                     </div>
                   )}
                   <div className="mt-2">

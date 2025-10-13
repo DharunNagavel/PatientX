@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import axios from "axios";
 import { nav } from "framer-motion/client";
 
-const Signup = ({setrole}) => {
+const Signup = ({setrole,setuser_id}) => {
   const [formData, setFormData] = useState({
     role: "", 
     name: "",
@@ -51,6 +51,7 @@ const Signup = ({setrole}) => {
       phone: "",
     });
     setrole(res.data.role);
+    setuser_id(res.data.user_id);
     navigate("/");
   } catch (error) {
     console.error("Signup error:", error);
