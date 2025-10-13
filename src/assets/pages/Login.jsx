@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
-const Login = () => {
+const Login = ({setrole}) => {
   const [formData, setFormData] = useState({
     mail: "",
     password: "",
@@ -28,7 +28,8 @@ const Login = () => {
         mail: "",
         password: "",
       });
-      navigate("/home");
+      setrole(res.data.role);
+      navigate("/");
     } catch (err) {
       console.error("Login error:", err);
       alert(err.response?.data?.error || "Login failed!");

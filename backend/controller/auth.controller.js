@@ -21,6 +21,8 @@ export const signup = async (req, res) => {
     res.send({
       message: 'User registered and logged in successfully',
       token,
+      role : role,
+      username : username
     });
   } catch (err) {
     console.log(err);
@@ -44,6 +46,8 @@ export const signin = async (req, res) => {
     res.send({
       message: 'Login successful',
       token,
+      role : user.role,
+      username : user.username
     });
   } 
   catch (err) 
