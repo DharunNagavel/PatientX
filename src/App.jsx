@@ -12,27 +12,43 @@ import Chatbot from "./assets/pages/Chatbot";
 import Researcher_consent from "./assets/pages/Researcher_consent";
 import Researcher_records from "./assets/pages/Researcher_records";
 import Researcher_profile from "./assets/pages/Researcher_profile";
-import { useState } from "react";
-import { i } from "framer-motion/client";
-
+import { useState, useEffect } from "react";
 
 function Layout({ children, role }) {
   const location = useLocation();
-  const hideNavbar = ["/login", "/signup", "/profile", "/researcher_profile"];
-  const hideFooter = ["/login", "/signup"];
+  const hideNavbar = ["/login", "/signup","/profile","researcher_profile"].includes(location.pathname);
+  const hideFooter = ["/login", "/signup"].includes(location.pathname);
+  
+  // Show chatbot on all pages except login/signup
+  const showChatbot = !["/login", "/signup"].includes(location.pathname);
 
   return (
     <>
-      {!hideNavbar.includes(location.pathname) && <Navbar role={role}/>}
+      {!hideNavbar && <Navbar role={role} />}
       <main>{children}</main>
-      {!hideFooter.includes(location.pathname) && <Footer />}
+      {!hideFooter && <Footer />}
+      
+      {/* Add Chatbot here - it will appear as floating button on all pages except login/signup */}
+      {showChatbot && <Chatbot />}
     </>
   );
 }
 
 function App() {
-  const [role,setrole] = useState("patient");
-  const [user_id,setuser_id] = useState();  
+  const [role, setRole] = useState(null); // Changed from "patient" to null
+  const [user_id, setUser_id] = useState();  
+
+  // Load user from localStorage on app start
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (user) {
+      setRole(user.role);
+      setUser_id(user.user_id);
+    } else {
+      setRole(null); // Explicitly set to null if no user
+    }
+  }, []);
+
   return (
     <BrowserRouter>
       <Layout role={role}>
@@ -41,13 +57,12 @@ function App() {
           <Route path="/researcher_consent" element={<Researcher_consent />} />
           <Route path="/researcher_records" element={<Researcher_records />} />
           <Route path="/researcher_profile" element={<Researcher_profile />} />
-          <Route pathe="/chatbot" element={<Chatbot />} />
-          <Route path="/records" element={<Records user_id={user_id} role={role}/>} />
+          <Route path="/records" element={<Records user_id={user_id} role={role} />} />
           <Route path="/research" element={<Research role={role} />} />
           <Route path="/consent" element={<Consent user_id={user_id} role={role} />} />
-          <Route path="/signup" element={<Signup setrole = {setrole} setuser_id={setuser_id}/>} />
-          <Route path="/login" element={<Login setrole = {setrole} setuser_id={setuser_id}/>} />
-          <Route path="/profile" element={<Profile role={role}/>} />
+          <Route path="/signup" element={<Signup setrole={setRole} setuser_id={setUser_id} />} />
+          <Route path="/login" element={<Login setrole={setRole} setuser_id={setUser_id} />} />
+          <Route path="/profile" element={<Profile role={role} />} />
         </Routes>
       </Layout>
     </BrowserRouter>

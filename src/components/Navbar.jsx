@@ -5,7 +5,6 @@ import Logo from "../assets/logo.png";
 import { gsap } from "gsap";
 
 const Navbar = ({ role }) => {
-
   const [isOpen, setIsOpen] = useState(false);
   const mobileMenuRef = useRef(null);
   const navigate = useNavigate();
@@ -49,15 +48,14 @@ const Navbar = ({ role }) => {
     { name: "Profile", path: "/researcher_profile" },
   ];
 
-  // Default menu (when not logged in)
+  // Default menu (when not logged in) - Only Signup, no Login
   const defaultMenuItems = [
     { name: "Home", path: "/" },
     { name: "Records", path: "/records" },
-    ...(role === 'Researcher' ? []:[]),
     { name: "Researcher", path: "/research" },
     { name: "Consent", path: "/consent" },
-    { name: "Login", path: "/login" },
     { name: "Signup", path: "/signup" },
+    // Login removed - users can navigate to login from signup page if needed
   ];
 
   // Determine which menu to show based on login status and role
@@ -106,7 +104,7 @@ const Navbar = ({ role }) => {
           ))}
           
           {/* Logout button only for logged-in users */}
-          {isLoggedIn && (
+          {isLoggedIn ? (
             <li>
               <button
                 onClick={handleLogout}
@@ -116,6 +114,9 @@ const Navbar = ({ role }) => {
                 Logout
               </button>
             </li>
+          ) : (
+            // Show nothing extra when not logged in (Signup is already in menuItems)
+            null
           )}
         </ul>
 
