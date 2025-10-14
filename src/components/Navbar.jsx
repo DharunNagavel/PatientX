@@ -53,7 +53,9 @@ const Navbar = ({ role }) => {
     { name: "Home", path: "/" },
     { name: "Records", path: "/records" },
     { name: "Researcher", path: "/research" },
-    { name: "Consent", path: "/consent" },
+    ...(role === "Researcher"
+      ? [{ name: "Consent", path: "/researcher_consent" }]
+      : [{ name: "Consent", path: "/consent" }]), 
     { name: "Signup", path: "/signup" },
     // Login removed - users can navigate to login from signup page if needed
   ];

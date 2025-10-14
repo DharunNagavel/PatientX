@@ -22,3 +22,21 @@ export const getResearchers = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+export const getrecords = async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM records');
+    const records = result.rows.map(record => ({
+      id: record.id,
+      patientId: record.patient_id,
+      researcherId: record.researcher_id,
+      data: record.data,
+      timestamp: record.timestamp
+    }));
+    console.log('Transformed records:', records); // For debugging
+    res.json(records);
+  } catch (err) {
+    console.error('Database error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
