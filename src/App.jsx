@@ -16,7 +16,7 @@ import { useState, useEffect } from "react";
 
 function Layout({ children, role }) {
   const location = useLocation();
-  const hideNavbar = ["/login", "/signup","/profile","researcher_profile"].includes(location.pathname);
+  const hideNavbar = ["/login", "/signup","/profile","/researcher_profile"].includes(location.pathname);
   const hideFooter = ["/login", "/signup"].includes(location.pathname);
   
   // Show chatbot on all pages except login/signup
