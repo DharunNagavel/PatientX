@@ -30,10 +30,10 @@ export const getrecords = async (req, res) => {
       id: record.id,
       patientId: record.patient_id,
       researcherId: record.researcher_id,
-      data: record.data,
+      data_hash: record.data_hash,
       timestamp: record.timestamp
     }));
-    console.log('Transformed records:', records); // For debugging
+    console.log('Transformed records:', records); 
     res.json(records);
   } catch (err) {
     console.error('Database error:', err);
