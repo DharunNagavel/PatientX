@@ -8,7 +8,7 @@ import Consent from "./assets/pages/Consent";
 import Signup from "./assets/pages/Signup";
 import Login from "./assets/pages/Login";
 import Profile from "./assets/pages/Profile";
-
+import Chatbot from "./assets/pages/Chatbot";
 import Researcher_consent from "./assets/pages/Researcher_consent";
 import Researcher_records from "./assets/pages/Researcher_records";
 import Researcher_profile from "./assets/pages/Researcher_profile";
@@ -41,6 +41,7 @@ function App() {
           <Route path="/researcher_consent" element={<Researcher_consent />} />
           <Route path="/researcher_records" element={<Researcher_records />} />
           <Route path="/researcher_profile" element={<Researcher_profile />} />
+          <Route pathe="/chatbot" element={<Chatbot />} />
           <Route path="/records" element={<Records user_id={user_id} role={role}/>} />
           <Route path="/research" element={<Research role={role} />} />
           <Route path="/consent" element={<Consent user_id={user_id} role={role} />} />
