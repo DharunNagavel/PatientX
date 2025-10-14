@@ -5,6 +5,7 @@ import Logo from "../assets/logo.png";
 import { gsap } from "gsap";
 
 const Navbar = ({ role }) => {
+
   const [isOpen, setIsOpen] = useState(false);
   const mobileMenuRef = useRef(null);
   const navigate = useNavigate();
@@ -52,6 +53,7 @@ const Navbar = ({ role }) => {
   const defaultMenuItems = [
     { name: "Home", path: "/" },
     { name: "Records", path: "/records" },
+    ...(role === 'Researcher' ? []:[]),
     { name: "Researcher", path: "/research" },
     { name: "Consent", path: "/consent" },
     { name: "Login", path: "/login" },

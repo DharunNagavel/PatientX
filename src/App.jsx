@@ -9,7 +9,6 @@ import Signup from "./assets/pages/Signup";
 import Login from "./assets/pages/Login";
 import Profile from "./assets/pages/Profile";
 import Chatbot from "./assets/pages/Chatbot";
-
 import Researcher_consent from "./assets/pages/Researcher_consent";
 import Researcher_records from "./assets/pages/Researcher_records";
 import Researcher_profile from "./assets/pages/Researcher_profile";

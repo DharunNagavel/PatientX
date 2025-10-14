@@ -6,7 +6,10 @@ import {
   requestConsent,
   getPendingRequests,
   declineConsent,
-  getUserRecords
+  getUserRecords,
+  getResearcherRequests,
+  cancelConsentRequest,
+  withdrawAccess
 } from "../controller/data.controller.js";
 
 const router = express.Router();
@@ -20,15 +23,25 @@ router.get("/getdata/:dataHash", getData);
 // Request consent to access someone's data
 router.post("/request-consent", requestConsent);
 
-router.get("/user/:user_id",getUserRecords);
+// Get user records
+router.get("/user/:user_id", getUserRecords);
 
 // Grant consent (approve a request)
 router.post("/grant-consent", grantConsent);
 
+// Decline consent
 router.post('/decline-consent', declineConsent);
 
 // Get pending consent requests for a data owner
 router.get("/pending-requests/:ownerId", getPendingRequests);
 
+// Get consent requests for researcher
+router.get("/researcher-requests/:researcherId", getResearcherRequests);
+
+// Cancel consent request
+router.post("/cancel-request", cancelConsentRequest);
+
+// Withdraw access
+router.post("/withdraw-access", withdrawAccess);
 
 export default router;
