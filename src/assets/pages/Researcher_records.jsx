@@ -369,7 +369,7 @@ const Researcher_records = ({user_id}) => {
                       <div className="p-6 flex-1 overflow-y-auto hover-content">
                         <div className="text-center mb-6">
                           <h4 className="text-2xl font-bold text-white mb-2">{record.type}</h4>
-                          <p className="text-blue-200 text-lg">Detailed View</p>
+                          <p className="text-blue-400 text-lg">Detailed View</p>
                         </div>
                         
                         <div className="bg-white/10 rounded-xl p-4 mb-4 backdrop-blur-sm border border-white/20">
@@ -394,9 +394,9 @@ const Researcher_records = ({user_id}) => {
                             {record.fileNames.map((name, i) => (
                               <div
                                 key={i}
-                                className="bg-white/5 rounded-lg p-3 border border-white/10 hover:bg-white/10 transition-colors flex items-center"
+                                className="bg-gray-700/50 rounded-lg p-3 border border-gray-600 hover:bg-gray-700 transition-colors flex items-center"
                               >
-                                <div className="w-6 h-6 mr-3 text-white/80 flex-shrink-0">
+                                <div className="w-6 h-6 mr-3 text-blue-400 flex-shrink-0">
                                   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                   </svg>
@@ -405,7 +405,7 @@ const Researcher_records = ({user_id}) => {
                                   <p className="text-white text-sm truncate" title={name}>
                                     {name}
                                   </p>
-                                  <p className="text-blue-300 text-xs">
+                                  <p className="text-blue-400 text-xs">
                                     {name.split('.').pop()?.toUpperCase()} File
                                   </p>
                                 </div>
