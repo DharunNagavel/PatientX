@@ -312,7 +312,7 @@ const Researcher_profile = () => {
             {/* Wallet Tab */}
             {activeTab === "wallet" && (
               <section>
-                <h2 className="text-3xl font-bold mb-6">Research Wallet</h2>
+                <h2 className="text-3xl font-bold mb-6">Wallet</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                   <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
                     <h3 className="text-lg font-semibold mb-4 text-white">Token Balance</h3>
@@ -358,7 +358,7 @@ const Researcher_profile = () => {
             {/* Settings Tab */}
             {activeTab === "settings" && (
               <section>
-                <h2 className="text-3xl font-bold mb-6">Research Settings</h2>
+                <h2 className="text-3xl font-bold mb-6"> Settings</h2>
                 <div className="flex flex-col gap-3">
                   {settingsOptions.map((option, index) => (
                     <div
