@@ -1,36 +1,45 @@
 import React, { useState, useEffect } from "react";
 
-const Researcher_consent = () => {
+const Researcher_consent = ({ user_id }) => {
   const [consentRequests, setConsentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState("all"); // "all", "pending", "approved", "declined"
+  const [filter, setFilter] = useState("all");
 
   // Fetch consent requests made by researcher
   const fetchConsentRequests = async () => {
     try {
-      // Replace '1' with the actual researcherId from authentication
-      const researcherId = 1; // This should be dynamic based on logged-in researcher
+      setLoading(true);
+      setError(null);
+      
+      // Validate user_id
+      if (!user_id) {
+        throw new Error('User ID not available. Please log in again.');
+      }
+
+      const researcherId = user_id;
+      
+      console.log(`🔍 Fetching consent requests for researcher: ${researcherId}`);
       
       const response = await fetch(`http://localhost:9000/api/block/data/researcher-requests/${researcherId}`);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch consent requests');
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
       
       if (data.success) {
-        // Transform backend data to match frontend structure
+        console.log(`✅ Found ${data.consentRequests?.length || 0} consent requests`);
+        
         const transformedRequests = data.consentRequests.map(request => ({
           id: request.id,
-          title: `Access request for ${getRecordType(request.data_value)}`,
-          owner: `User ${request.owner_id}`,
-          type: getRecordType(request.data_value),
-          status: request.status || "pending", // pending, approved, declined
+          title: `Access request for ${request.record_type}`,
+          owner: request.owner_name || `User ${request.owner_id}`,
+          type: request.record_type,
+          status: request.status || "pending",
           timestamp: new Date(request.requested_at).toLocaleString(),
           dataDescription: getDataDescription(request.data_value),
-          // Store backend data for API calls
           backendData: {
             requestId: request.id,
             ownerId: request.owner_id,
@@ -40,22 +49,15 @@ const Researcher_consent = () => {
         }));
         
         setConsentRequests(transformedRequests);
+      } else {
+        throw new Error(data.error || 'Failed to fetch requests');
       }
     } catch (err) {
-      setError(err.message);
+      const errorMessage = err.message || 'Unknown error occurred';
+      setError(errorMessage);
       console.error('Error fetching consent requests:', err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Extract record type from data_value
-  const getRecordType = (dataValue) => {
-    try {
-      const record = JSON.parse(dataValue);
-      return record.recordType || 'Medical Record';
-    } catch {
-      return 'Medical Data';
     }
   };
 
@@ -63,7 +65,7 @@ const Researcher_consent = () => {
   const getDataDescription = (dataValue) => {
     try {
       const record = JSON.parse(dataValue);
-      return record.description || 'Health data for research purposes';
+      return record.notes || `Health data for research purposes`;
     } catch {
       return 'Encrypted health data';
     }
@@ -71,6 +73,10 @@ const Researcher_consent = () => {
 
   // Handle cancel request
   const handleCancel = async (request) => {
+    if (!window.confirm('Are you sure you want to cancel this request?')) {
+      return;
+    }
+
     try {
       const response = await fetch('http://localhost:9000/api/block/data/cancel-request', {
         method: 'POST',
@@ -79,7 +85,7 @@ const Researcher_consent = () => {
         },
         body: JSON.stringify({
           requestId: request.backendData.requestId,
-          researcherId: 1 // Replace with actual researcher ID
+          researcherId: user_id
         }),
       });
 
@@ -90,7 +96,6 @@ const Researcher_consent = () => {
       }
 
       if (data.success) {
-        // Update local state
         setConsentRequests(prev =>
           prev.map(req =>
             req.id === request.id
@@ -108,6 +113,10 @@ const Researcher_consent = () => {
 
   // Handle withdraw access (for approved requests)
   const handleWithdraw = async (request) => {
+    if (!window.confirm('Are you sure you want to withdraw access to this data?')) {
+      return;
+    }
+
     try {
       const response = await fetch('http://localhost:9000/api/block/data/withdraw-access', {
         method: 'POST',
@@ -127,7 +136,6 @@ const Researcher_consent = () => {
       }
 
       if (data.success) {
-        // Update local state
         setConsentRequests(prev =>
           prev.map(req =>
             req.id === request.id
@@ -140,6 +148,33 @@ const Researcher_consent = () => {
     } catch (err) {
       console.error('❌ Error withdrawing access:', err);
       alert('Error withdrawing access: ' + err.message);
+    }
+  };
+
+  // Handle view data (for approved requests)
+  const handleViewData = async (request) => {
+    try {
+      const response = await fetch(`http://localhost:9000/api/block/data/getdata/${request.backendData.dataHash}?requesterId=${user_id}`);
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch data');
+      }
+
+      if (data.consentVerified) {
+        console.log('📊 Data accessed:', data.data);
+        // Display data in a more user-friendly way
+        const recordData = data.data;
+        const fileInfo = recordData.files ? 
+          `Files: ${recordData.files.length} file(s)` : 
+          'No files attached';
+        
+        alert(`✅ Data accessed successfully!\n\nRecord Type: ${recordData.recordType}\n${fileInfo}\nNotes: ${recordData.notes || 'No notes'}\nRate: ₹${recordData.rate || 0}`);
+      }
+    } catch (err) {
+      console.error('❌ Error viewing data:', err);
+      alert('Error accessing data: ' + err.message);
     }
   };
 
@@ -185,15 +220,23 @@ const Researcher_consent = () => {
     }
   };
 
-  // Load consent requests on component mount
+  // Load consent requests when component mounts or user_id changes
   useEffect(() => {
-    fetchConsentRequests();
-  }, []);
+    if (user_id) {
+      fetchConsentRequests();
+    } else {
+      setError("User ID not available. Please log in again.");
+      setLoading(false);
+    }
+  }, [user_id]);
 
   if (loading) {
     return (
       <div className="min-h-screen w-full bg-black text-white flex items-center justify-center">
-        <div className="text-xl">Loading your consent requests...</div>
+        <div className="text-center">
+          <div className="text-xl mb-4">Loading your consent requests...</div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+        </div>
       </div>
     );
   }
@@ -201,7 +244,15 @@ const Researcher_consent = () => {
   if (error) {
     return (
       <div className="min-h-screen w-full bg-black text-white flex items-center justify-center">
-        <div className="text-xl text-red-500">Error: {error}</div>
+        <div className="text-center">
+          <div className="text-xl text-red-500 mb-4">Error: {error}</div>
+          <button 
+            onClick={fetchConsentRequests}
+            className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded transition"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
@@ -212,13 +263,14 @@ const Researcher_consent = () => {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold">Research Consent Requests</h1>
-            <p className="text-gray-400 mt-2">Manage your data access requests</p>
+            <p className="text-gray-400 mt-2">Manage your data access requests (User ID: {user_id})</p>
           </div>
           <button
             onClick={fetchConsentRequests}
-            className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded transition flex items-center gap-2"
+            disabled={loading}
+            className="bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400 px-4 py-2 rounded transition flex items-center gap-2"
           >
-            <span>Refresh</span>
+            <span>{loading ? "Refreshing..." : "Refresh"}</span>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
@@ -227,7 +279,7 @@ const Researcher_consent = () => {
 
         {/* Filter Tabs */}
         <div className="flex gap-4 mb-6 overflow-x-auto pb-2">
-          {["all", "pending", "approved", "declined"].map((filterType) => (
+          {["all", "pending", "approved", "declined", "cancelled", "withdrawn"].map((filterType) => (
             <button
               key={filterType}
               onClick={() => setFilter(filterType)}
@@ -310,29 +362,28 @@ const Researcher_consent = () => {
                     )}
                     
                     {request.status === "approved" && (
-                      <button
-                        onClick={() => handleWithdraw(request)}
-                        className="bg-purple-500 hover:bg-purple-600 px-4 py-2 rounded transition flex items-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                        Withdraw Access
-                      </button>
-                    )}
+                      <>
+                        <button
+                          onClick={() => handleWithdraw(request)}
+                          className="bg-purple-500 hover:bg-purple-600 px-4 py-2 rounded transition flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                          </svg>
+                          Withdraw Access
+                        </button>
 
-                    {/* View Data Button (when approved) */}
-                    {request.status === "approved" && (
-                      <button
-                        onClick={() => {/* Add view data functionality */}}
-                        className="bg-green-500 hover:bg-green-600 px-4 py-2 rounded transition flex items-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                        View Data
-                      </button>
+                        <button
+                          onClick={() => handleViewData(request)}
+                          className="bg-green-500 hover:bg-green-600 px-4 py-2 rounded transition flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          View Data
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -340,32 +391,6 @@ const Researcher_consent = () => {
             ))}
           </div>
         )}
-
-        {/* Quick Stats */}
-        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-gray-800 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-blue-400">{consentRequests.length}</div>
-            <div className="text-gray-400 text-sm">Total Requests</div>
-          </div>
-          <div className="bg-gray-800 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-yellow-400">
-              {consentRequests.filter(req => req.status === "pending").length}
-            </div>
-            <div className="text-gray-400 text-sm">Pending</div>
-          </div>
-          <div className="bg-gray-800 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-green-400">
-              {consentRequests.filter(req => req.status === "approved").length}
-            </div>
-            <div className="text-gray-400 text-sm">Approved</div>
-          </div>
-          <div className="bg-gray-800 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-red-400">
-              {consentRequests.filter(req => req.status === "declined").length}
-            </div>
-            <div className="text-gray-400 text-sm">Declined</div>
-          </div>
-        </div>
       </div>
     </div>
   );

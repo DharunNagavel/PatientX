@@ -4,7 +4,7 @@ import { Menu, X } from "lucide-react";
 import Logo from "../assets/logo.png";
 import { gsap } from "gsap";
 
-const Navbar = () => {
+const Navbar = ({role}) => {
   const [isOpen, setIsOpen] = useState(false);
   const mobileMenuRef = useRef(null);
   useEffect(() => {
@@ -21,11 +21,13 @@ const Navbar = () => {
   const menuItems = [
     { name: "Home", path: "/" },
     { name: "Records", path: "/records" },
+    ...(role === 'Researcher' ? []:[]),
     { name: "Researcher", path: "/research" },
-    { name: "Consent", path: "/consent" },
+    ...(role === "Researcher"
+      ? [{ name: "Consent", path: "/researcher_consent" }]
+      : [{ name: "Consent", path: "/consent" }]),
     { name: "Signup", path: "/signup" },
   ];
-
   return (
     <nav className="fixed left-0 w-full z-50 bg-blue-500 text-white rounded-4xl top-1 shadow-lg transition-all duration-500">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center py-3">

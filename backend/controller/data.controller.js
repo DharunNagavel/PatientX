@@ -13,12 +13,27 @@ function generateHash(data) {
 }
 
 // Store data + metadata - UPDATED TO STORE FILE CONTENT
+// Store data + metadata - UPDATED WITH VALIDATION
 export const storeData = async (req, res) => {
   try {
     const { userId, type, rate, notes, files: fileData } = req.body;
     
-    if (!userId || !type) {
-      return res.status(400).json({ error: "userId and type are required" });
+    console.log(`🔧 storeData called with userId: ${userId}, type: ${type}`);
+    
+    // Validate userId before proceeding
+    if (!userId) {
+      return res.status(400).json({ error: "userId is required" });
+    }
+    
+    const userIdInt = parseInt(userId);
+    if (isNaN(userIdInt) || userIdInt < 1) {
+      return res.status(400).json({ 
+        error: `Invalid userId: ${userId}. Must be a positive number starting from 1.` 
+      });
+    }
+    
+    if (!type) {
+      return res.status(400).json({ error: "type is required" });
     }
 
     // Handle file content from request
@@ -60,20 +75,19 @@ export const storeData = async (req, res) => {
     // Convert to string for blockchain storage
     const dataString = JSON.stringify(medicalRecord);
     const hash = generateHash(dataString);
-    const accountIndex = parseInt(userId) - 1;
     
-    console.log(`💾 Storing medical record for user ${userId}`);
+    console.log(`💾 Storing medical record for user ${userIdInt}`);
     console.log(`📋 Record Type: ${type}`);
     console.log(`📁 Files: ${files.length} files with actual content`);
     console.log(`💰 Rate: ₹${rate}`);
 
-    // Store on blockchain
-    const blockchainResult = await storeDataOnBlockchain(dataString, accountIndex);
+    // Store on blockchain - use the validated userIdInt
+    const blockchainResult = await storeDataOnBlockchain(dataString, userIdInt);
 
     // Store in database
     await pool.query(
       "INSERT INTO records (user_id, data_hash, data_value, blockchain_txn, blockchain_owner) VALUES ($1, $2, $3, $4, $5)",
-      [userId, hash, dataString, blockchainResult.transactionHash, blockchainResult.owner]
+      [userIdInt, hash, dataString, blockchainResult.transactionHash, blockchainResult.owner]
     );
 
     res.json({ 
@@ -82,19 +96,18 @@ export const storeData = async (req, res) => {
       txnHash: blockchainResult.transactionHash,
       dataHash: hash,
       owner: blockchainResult.owner,
-      userAccount: `Account ${accountIndex}`,
+      userAccount: `Account ${blockchainResult.accountIndex}`,
       record: {
         ...medicalRecord,
         files: medicalRecord.files.map(f => ({ 
           fileName: f.fileName, 
           size: f.size,
           mimeType: f.mimeType 
-          // Don't send back the actual content in response
         }))
       }
     });
   } catch (err) {
-    console.error(err);
+    console.error('❌ Error in storeData:', err);
     res.status(500).json({ error: "Server error: " + err.message });
   }
 };
@@ -465,6 +478,144 @@ if (userExists.rowCount === 0) {  // Check if no rows returned
     res.status(500).json({ 
       success: false,
       error: "Server error: " + err.message 
+    });
+  }
+};
+// Add these to your backend controller (data.controller.js)
+
+// GET CONSENT REQUESTS FOR RESEARCHER
+export const getResearcherRequests = async (req, res) => {
+  try {
+    const { researcherId } = req.params;
+
+    console.log(`📋 Getting consent requests for researcher: ${researcherId}`);
+
+    const result = await pool.query(
+      `SELECT cr.*, r.data_value, u.username as owner_name
+       FROM consent_requests cr
+       JOIN records r ON cr.data_hash = r.data_hash
+       JOIN users u ON cr.owner_id = u.user_id
+       WHERE cr.requester_id = $1
+       ORDER BY cr.requested_at DESC`,
+      [researcherId]
+    );
+
+    const consentRequests = result.rows.map(row => {
+      let recordData;
+      try {
+        recordData = JSON.parse(row.data_value);
+      } catch {
+        recordData = { recordType: 'Medical Data' };
+      }
+
+      return {
+        id: row.id,
+        owner_id: row.owner_id,
+        owner_name: row.owner_name,
+        data_hash: row.data_hash,
+        status: row.status,
+        requested_at: row.requested_at,
+        granted_at: row.granted_at,
+        data_value: row.data_value,
+        record_type: recordData.recordType || 'Medical Record',
+        purpose: row.purpose || "Research analysis"
+      };
+    });
+
+    res.json({
+      success: true,
+      consentRequests: consentRequests,
+      total: result.rowCount
+    });
+  } catch (err) {
+    console.error('❌ Error in getResearcherRequests:', err);
+    res.status(500).json({ 
+      success: false,
+      error: "Server error: " + err.message 
+    });
+  }
+};
+
+// CANCEL CONSENT REQUEST
+export const cancelConsentRequest = async (req, res) => {
+  try {
+    const { requestId, researcherId } = req.body;
+
+    console.log(`❌ Canceling consent request: ${requestId} by researcher: ${researcherId}`);
+
+    if (!requestId || !researcherId) {
+      return res.status(400).json({ 
+        error: "requestId and researcherId are required"
+      });
+    }
+
+    // Update consent request status to cancelled
+    const result = await pool.query(
+      "UPDATE consent_requests SET status='cancelled' WHERE id=$1 AND requester_id=$2 AND status='pending'",
+      [requestId, researcherId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Request not found or cannot be cancelled"
+      });
+    }
+
+    console.log(`✅ Consent request cancelled: ${requestId}`);
+
+    res.json({ 
+      success: true,
+      message: "Request cancelled successfully", 
+      requestId: requestId
+    });
+  } catch (err) {
+    console.error('❌ Error in cancelConsentRequest:', err);
+    res.status(500).json({ 
+      success: false,
+      error: "Server error: " + err.message
+    });
+  }
+};
+
+// WITHDRAW ACCESS
+export const withdrawAccess = async (req, res) => {
+  try {
+    const { requestId, ownerId } = req.body;
+
+    console.log(`🔒 Withdrawing access for request: ${requestId}`);
+
+    if (!requestId) {
+      return res.status(400).json({ 
+        error: "requestId is required"
+      });
+    }
+
+    // Update consent request status to withdrawn
+    const result = await pool.query(
+      "UPDATE consent_requests SET status='withdrawn' WHERE id=$1 AND status='approved'",
+      [requestId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Approved request not found"
+      });
+    }
+
+    console.log(`✅ Access withdrawn for request: ${requestId}`);
+
+    res.json({ 
+      success: true,
+      message: "Access withdrawn successfully", 
+      requestId: requestId
+    });
+  } catch (err) {
+    console.error('❌ Error in withdrawAccess:', err);
+    res.status(500).json({ 
+      success: false,
+      error: "Server error: " + err.message
     });
   }
 };
