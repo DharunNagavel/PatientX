@@ -21,11 +21,10 @@ const Navbar = ({role}) => {
   const menuItems = [
     { name: "Home", path: "/" },
     { name: "Records", path: "/records" },
-    ...(role === 'Researcher' ? []:[]),
     { name: "Researcher", path: "/research" },
     ...(role === "Researcher"
       ? [{ name: "Consent", path: "/researcher_consent" }]
-      : [{ name: "Consent", path: "/consent" }]),
+      : [{ name: "Consent", path: "/consent" }]), 
     { name: "Signup", path: "/signup" },
   ];
   return (
