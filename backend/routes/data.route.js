@@ -9,7 +9,7 @@ import {
   getUserRecords,
   getResearcherRequests,
   cancelConsentRequest,
-  withdrawAccess
+  withdrawAccess,
 } from "../controller/data.controller.js";
 
 const router = express.Router();
@@ -43,5 +43,6 @@ router.post("/cancel-request", cancelConsentRequest);
 
 // Withdraw access
 router.post("/withdraw-access", withdrawAccess);
+
 
 export default router;

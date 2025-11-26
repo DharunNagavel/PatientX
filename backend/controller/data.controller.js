@@ -175,7 +175,7 @@ export const requestConsent = async (req, res) => {
   }
 };
 
-// GRANT CONSENT - Data owner approves a request
+// GRANT CONSENT - Data owner approves a request - UPDATED WITH FIX
 export const grantConsent = async (req, res) => {
   try {
     const { ownerId, requestId } = req.body;
@@ -188,10 +188,18 @@ export const grantConsent = async (req, res) => {
       });
     }
 
+    // Validate ownerId first
+    const ownerIdInt = parseInt(ownerId);
+    if (isNaN(ownerIdInt) || ownerIdInt < 1) {
+      return res.status(400).json({ 
+        error: `Invalid ownerId: ${ownerId}. Must be a positive number starting from 1.` 
+      });
+    }
+
     // 1. Get the consent request
     const requestResult = await pool.query(
       "SELECT * FROM consent_requests WHERE id=$1 AND owner_id=$2 AND status='pending'",
-      [requestId, ownerId]
+      [requestId, ownerIdInt]
     );
     
     if (requestResult.rowCount === 0) {
@@ -206,7 +214,7 @@ export const grantConsent = async (req, res) => {
     // 2. Get the actual data record
     const recordResult = await pool.query(
       "SELECT * FROM records WHERE user_id=$1 AND data_hash=$2",
-      [ownerId, consentRequest.data_hash]
+      [ownerIdInt, consentRequest.data_hash]
     );
 
     if (recordResult.rowCount === 0) {
@@ -219,21 +227,24 @@ export const grantConsent = async (req, res) => {
 
     console.log(`✅ Processing consent request from User ${consentRequest.requester_id}`);
 
-    // 3. Use direct account mapping
-    const ownerAccountIndex = parseInt(ownerId) - 1;
-    const accounts = await getAccountInfo();
-    const ownerAddress = accounts.accounts[ownerAccountIndex].address;
-    const requesterAddress = accounts.accounts[parseInt(consentRequest.requester_id) - 1].address;
+    // 3. Use USER IDs instead of account indexes
+    const requesterIdInt = parseInt(consentRequest.requester_id);
+    
+    if (isNaN(requesterIdInt) || requesterIdInt < 1) {
+      return res.status(400).json({ 
+        error: `Invalid requester ID in consent request: ${consentRequest.requester_id}` 
+      });
+    }
 
     console.log(`👥 Granting access:`);
-    console.log(`   Owner: ${ownerAddress} (User ${ownerId})`);
-    console.log(`   Requester: ${requesterAddress} (User ${consentRequest.requester_id})`);
+    console.log(`   Owner: User ${ownerIdInt}`);
+    console.log(`   Requester: User ${requesterIdInt}`);
 
-    // 4. Grant consent on blockchain
+    // 4. Grant consent on blockchain - pass USER IDs, not addresses or indexes
     const blockchainResult = await grantConsentOnBlockchain(
       record.data_value, 
-      requesterAddress, 
-      ownerAccountIndex
+      requesterIdInt,  // Pass requester USER ID
+      ownerIdInt       // Pass owner USER ID (not account index!)
     );
 
     // 5. Update consent request status
@@ -248,7 +259,7 @@ export const grantConsent = async (req, res) => {
       success: true,
       message: "Consent granted successfully", 
       requestId: requestId,
-      dataOwner: ownerId,
+      dataOwner: ownerIdInt,
       grantedTo: consentRequest.requester_id,
       txnHash: blockchainResult.transactionHash,
       consentVerified: blockchainResult.consentVerified
@@ -481,7 +492,6 @@ if (userExists.rowCount === 0) {  // Check if no rows returned
     });
   }
 };
-// Add these to your backend controller (data.controller.js)
 
 // GET CONSENT REQUESTS FOR RESEARCHER
 export const getResearcherRequests = async (req, res) => {

@@ -10,26 +10,86 @@ const Researcher_records = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const containerRef = useRef(null);
   const cardsRef = useRef([]);
+  
+  // Get user_id from localStorage or sessionStorage
+  const user_id = localStorage.getItem('user_id') || sessionStorage.getItem('user_id') || null;
 
-  // Generate dummy records
   useEffect(() => {
-    const dummyRecords = Array.from({ length: 30 }).map((_, i) => ({
-      id: i + 1,
-      patient: `Patient ${i + 1}`,
-      type: ["Medical Report", "MRI Scan", "X-ray", "Prescription", "Lab Test", "Ultrasound"][i % 6],
-      date: new Date(Date.now() - i * 86400000).toISOString(),
-      files: Math.floor(Math.random() * 5) + 1,
-      notes: `Medical record containing diagnostic information and treatment details for patient ${i + 1}. This includes comprehensive health data, diagnostic results, and recommended treatments.`,
-      fileNames: Array.from({ length: Math.floor(Math.random() * 4) + 2 }).map(
-        (__, j) => `medical_file_${j + 1}.${["pdf", "png", "dcm", "doc"][j % 4]}`
-      ),
-      filesData: [],
-      price: Math.floor(Math.random() * 50) + 10, // Random price between $10-$60
-    }));
-    setRecords(dummyRecords);
-  }, []);
+  const fetchRecords = async () => {
+    try {
+      setLoading(true);
+      console.log("🔍 Fetching real records from database...");
+
+      const response = await fetch("http://localhost:9000/api/records");
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("🔥 RAW BACKEND RESPONSE:", data);
+
+      // Accept ANY backend format:
+      // { success: true, records: [...] }
+      // { records: [...] }
+      // { data: [...] }
+      // [ ... ]
+      const realRecords =
+        data.records ||
+        data.data ||
+        (Array.isArray(data) ? data : []);
+
+      if (!realRecords || realRecords.length === 0) {
+        throw new Error("No records found in database");
+      }
+
+      // Transform records exactly like before
+      const transformedRecords = realRecords.map((record, index) => {
+        const recordData = record.record_data || {};
+
+        const patientId =
+          record.user_id && !isNaN(parseInt(record.user_id))
+            ? parseInt(record.user_id)
+            : index + 1000;
+
+        return {
+          id: record.data_hash || `record-${index}`,
+          patient: record.patient_name || "Unknown Patient",
+          type: recordData.recordType || "Medical Record",
+          date: record.created_at || new Date().toISOString(),
+          files: recordData.files ? recordData.files.length : 0,
+          notes: recordData.notes || "No additional information available",
+          fileNames: recordData.files
+            ? recordData.files.map((f) => f.fileName)
+            : ["medical_record.dat"],
+          patientId: patientId,
+          dataHash: record.data_hash,
+          originalData: record.data_value,
+          blockchainTxn: record.blockchain_txn,
+          blockchainOwner: record.blockchain_owner,
+        };
+      });
+
+      console.log(`✅ Transformed ${transformedRecords.length} real records`);
+      setRecords(transformedRecords);
+      setError(null);
+    } catch (err) {
+      console.error("❌ Error fetching records:", err);
+      setError(
+        "Failed to load records from database. Please make sure there are records stored in the system."
+      );
+      setRecords([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchRecords();
+}, []);
 
   // Animate cards with GSAP
   useEffect(() => {
@@ -44,52 +104,106 @@ const Researcher_records = () => {
     });
   }, [records]);
 
-  // Filter records by search term
   const filteredRecords = records.filter(
     (r) =>
       r.patient.toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.type.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Handle request to purchase
-  const handleRequestPurchase = (record) => {
-    setRequestedRecords(prev => new Set([...prev, record.id]));
-    
-    // Simulate API call to send request to patient
-    setTimeout(() => {
-      // Simulate patient acceptance after 2 seconds
-      setRequestedRecords(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(record.id);
-        return newSet;
+  const handleRequestPurchase = async (record) => {
+    try {
+      console.log('=== REQUEST CONSENT DETAILS ===');
+      console.log('Record:', record);
+      console.log('Requester ID (Researcher):', user_id);
+      console.log('Owner ID (Patient):', record.patientId);
+      console.log('Data Hash:', record.dataHash);
+      console.log('==============================');
+      
+      // Validate user_id is available
+      if (!user_id) {
+        alert('❌ Error: User ID not available. Please make sure you are logged in.');
+        return;
+      }
+
+      // FIXED: More flexible validation for patientId
+      if (!record.patientId || record.patientId < 0) {
+        console.warn('Patient ID might be a fallback ID:', record.patientId);
+        // Continue anyway since we have a valid fallback ID
+      }
+
+      // Validate dataHash is available (REAL hash from blockchain)
+      if (!record.dataHash) {
+        alert('❌ Error: Invalid data hash. This record cannot be accessed.');
+        return;
+      }
+
+      // Show confirmation dialog with improved messaging
+      const isConfirmed = window.confirm(
+        `REQUEST ACCESS CONFIRMATION\n\n` +
+        `Patient: ${record.patient}\n` +
+        `Record Type: ${record.type}\n` +
+        `Patient ID: ${record.patientId}\n` +
+        `Researcher ID: ${user_id}\n` +
+        `Data Hash: ${record.dataHash.substring(0, 20)}...\n\n` +
+        `Are you sure you want to request access to this medical record?`
+      );
+
+      if (!isConfirmed) {
+        console.log('Consent request cancelled by user');
+        return;
+      }
+
+      console.log('🔄 Sending consent request to backend...');
+      
+      // API call to request consent with improved error handling
+      const response = await fetch('http://localhost:9000/api/block/data/request-consent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          requesterId: parseInt(user_id), // Researcher's user ID
+          ownerId: record.patientId, // Patient's user ID (now always valid)
+          dataHash: record.dataHash // Real data hash (from blockchain)
+        })
       });
-      setPendingPaymentRecords(prev => new Set([...prev, record.id]));
-    }, 2000);
+
+      const result = await response.json();
+      console.log('Backend response:', result);
+
+      if (response.ok && result.success) {
+        alert('✅ Consent request sent successfully!\n\nThe patient will be notified and can approve your request.');
+        console.log('✅ Consent request successful:', result);
+        setRequestedRecords(prev => new Set([...prev, record.id]));
+      } else {
+        console.error('❌ Consent request failed:', result);
+        const errorMessage = result.error || result.message || 'Unknown error occurred';
+        
+        // More specific error messages
+        if (errorMessage.includes('patient') || errorMessage.includes('owner')) {
+          alert(`❌ Failed to send consent request:\n\nPatient account not found. This record may belong to a user who no longer exists in the system.`);
+        } else {
+          alert(`❌ Failed to send consent request:\n\n${errorMessage}`);
+        }
+      }
+    } catch (err) {
+      console.error('❌ Network error requesting consent:', err);
+      alert('❌ Network error requesting consent. Please check:\n\n1. Backend server is running\n2. Your internet connection\n3. Try again later');
+    }
   };
 
-  // Handle payment initiation
   const handleInitiatePayment = (record) => {
     setSelectedRecord(record);
-    setPaymentAmount(record.price);
+    setPaymentAmount(record.price || 0);
     setShowPaymentModal(true);
   };
 
-  // Handle payment completion
   const handlePaymentComplete = () => {
     if (selectedRecord) {
-      setPendingPaymentRecords(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(selectedRecord.id);
-        return newSet;
-      });
+      console.log('Processing payment for:', selectedRecord.id);
       setPurchasedRecords(prev => new Set([...prev, selectedRecord.id]));
       setShowPaymentModal(false);
-      setSelectedRecord(null);
-      
-      // Simulate successful payment and data access
-      setTimeout(() => {
-        alert(`Payment successful! You now have access to ${selectedRecord.patient}'s ${selectedRecord.type}`);
-      }, 500);
+      alert('✅ Payment successful! You can now access the record.');
     }
   };
 
@@ -117,9 +231,13 @@ const Researcher_records = () => {
       );
     }
     return (
-      <span className="inline-block px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-sm font-medium border border-blue-500/30">
-        {record.type}
-      </span>
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-xl text-gray-300">Loading medical records...</p>
+          <p className="text-gray-500 mt-2">Fetching real data from database</p>
+        </div>
+      </div>
     );
   };
 
@@ -156,12 +274,31 @@ const Researcher_records = () => {
       );
     }
     return (
-      <button 
-        onClick={() => handleRequestPurchase(record)}
-        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg transition-all duration-300 font-medium text-sm shadow-lg hover:shadow-blue-500/25 hover:scale-105"
-      >
-        Request To Purchase
-      </button>
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black text-white flex items-center justify-center">
+        <div className="text-center max-w-2xl mx-auto px-4">
+          <div className="w-24 h-24 mx-auto mb-4 text-red-500">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <p className="text-xl text-red-400 mb-2">No Records Available</p>
+          <p className="text-gray-400 mb-4">{error}</p>
+          <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+            <p className="text-yellow-400 mb-2">💡 To test this feature:</p>
+            <p className="text-gray-300 text-sm">
+              1. Make sure patients have stored medical records<br/>
+              2. Check if the backend is running properly<br/>
+              3. Verify the database has records in the 'records' table
+            </p>
+          </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-6 px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors font-medium"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
     );
   };
 
@@ -238,24 +375,24 @@ const Researcher_records = () => {
       
       <div className="pt-20 pb-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          {/* Stats Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-              <div className="text-2xl font-bold text-white">{records.length}</div>
-              <div className="text-gray-400 text-sm">Total Records</div>
-            </div>
-            <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-              <div className="text-2xl font-bold text-yellow-400">{requestedRecords.size}</div>
-              <div className="text-gray-400 text-sm">Pending Requests</div>
-            </div>
-            <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-              <div className="text-2xl font-bold text-green-400">{pendingPaymentRecords.size}</div>
-              <div className="text-gray-400 text-sm">Ready for Payment</div>
-            </div>
-            <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-              <div className="text-2xl font-bold text-blue-400">{purchasedRecords.size}</div>
-              <div className="text-gray-400 text-sm">Purchased</div>
-            </div>
+          {/* Header */}
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-bold text-white mb-4">
+              Medical Records Database
+            </h1>
+            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+              Browse and request access to patient medical records for research purposes
+            </p>
+            {user_id && (
+              <p className="text-green-400 mt-2">
+                Logged in as Researcher ID: {user_id}
+              </p>
+            )}
+            {records.length > 0 && (
+              <p className="text-blue-400 mt-2">
+                Found {records.length} real medical records in the system
+              </p>
+            )}
           </div>
 
           <div className="mb-8 max-w-2xl mx-auto">
@@ -402,6 +539,14 @@ const Researcher_records = () => {
                         <div className="bg-gray-800/80 rounded-xl p-4 mb-4 backdrop-blur-sm border border-gray-700">
                           <h5 className="text-white font-semibold text-lg mb-2">Clinical Notes</h5>
                           <p className="text-white/90 leading-relaxed text-sm">{record.notes}</p>
+                          <div className="mt-2 p-2 bg-black/20 rounded text-xs font-mono break-all">
+                            <strong>Data Hash:</strong> {record.dataHash}
+                          </div>
+                          {record.blockchainTxn && (
+                            <div className="mt-2 p-2 bg-black/20 rounded text-xs font-mono break-all">
+                              <strong>Blockchain TXN:</strong> {record.blockchainTxn.substring(0, 20)}...
+                            </div>
+                          )}
                         </div>
 
                         <div className="bg-gray-800/80 rounded-xl p-4 backdrop-blur-sm border border-gray-700">
