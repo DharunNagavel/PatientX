@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { FaUserCircle, FaFlask, FaWallet, FaCog, FaChevronRight, FaDatabase, FaChartLine } from "react-icons/fa";
+import {
+  FaUserCircle,
+  FaFlask,
+  FaWallet,
+  FaCog,
+  FaChevronRight,
+  FaDatabase,
+  FaChartLine
+} from "react-icons/fa";
 import { Menu, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -9,22 +17,69 @@ const Researcher_profile = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
 
+  /* -----------------------------
+      NEW STUDY MODAL STATES
+  ----------------------------- */
+  const [openModal, setOpenModal] = useState(false);
+  const [newStudy, setNewStudy] = useState({
+    title: "",
+    createdOn: "",
+    datasetNeeded: "",
+    type: "",
+  });
+
+  const handleStudyChange = (e) => {
+    const { name, value } = e.target;
+    setNewStudy((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleStudySubmit = (e) => {
+    e.preventDefault();
+    console.log("New Study Created:", newStudy);
+    setOpenModal(false);
+    setNewStudy({ title: "", createdOn: "", datasetNeeded: "", type: "" });
+  };
+
+  /* -----------------------------
+      VIEW DETAILS PANEL STATES
+  ----------------------------- */
+  const [showDetails, setShowDetails] = useState(false);
+  const [selectedStudy, setSelectedStudy] = useState(null);
+
   const researcherData = {
     name: "Dr. Research",
     email: "researcher@example.com",
-    researcherId: "RS-203948",
     studiesConducted: 8,
     datasetsAccessed: 24,
-    tokensSpent: 1200,
-    tokensAvailable: 350,
     currentProjects: 3,
-    approvalRate: "92%"
+    approvalRate: "92%",
   };
 
   const recentStudies = [
-    { id: 1, title: "Cardiovascular Disease Patterns", date: "Oct 15, 2025", status: "Completed" },
-    { id: 2, title: "Diabetes Treatment Analysis", date: "Oct 12, 2025", status: "In Progress" },
-    { id: 3, title: "Mental Health Trends", date: "Oct 8, 2025", status: "Completed" },
+    {
+      id: 1,
+      title: "Cardiovascular Disease Patterns",
+      date: "Oct 15, 2025",
+      status: "Completed",
+      datasetNeeded: "Heart X-rays, ECG reports",
+      type: "X-ray"
+    },
+    {
+      id: 2,
+      title: "Diabetes Treatment Analysis",
+      date: "Oct 12, 2025",
+      status: "In Progress",
+      datasetNeeded: "Blood sugar profiles, Insulin test reports",
+      type: "Lab Test"
+    },
+    {
+      id: 3,
+      title: "Mental Health Trends",
+      date: "Oct 8, 2025",
+      status: "Completed",
+      datasetNeeded: "Brain MRI scans, mood tracking dataset",
+      type: "Scan"
+    },
   ];
 
   const settingsOptions = [
@@ -37,7 +92,7 @@ const Researcher_profile = () => {
     "Billing & Payments",
     "Research Institution Details",
     "Download Research Data",
-    "Delete Research Account"
+    "Delete Research Account",
   ];
 
   const fadeIn = {
@@ -45,20 +100,24 @@ const Researcher_profile = () => {
     visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
   };
 
+  /* -----------------------------
+      SIDEBAR COMPONENT
+  ----------------------------- */
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       <div className="flex flex-col items-center mb-10">
         <FaUserCircle size={80} className="text-white mb-3" />
         <h2 className="text-xl font-semibold">{researcherData.name}</h2>
         <p className="text-gray-300 text-sm">{researcherData.email}</p>
-        <p className="text-blue-400 text-xs mt-1">Research ID: {researcherData.researcherId}</p>
       </div>
 
       <nav className="flex flex-col gap-4">
         <button
           onClick={() => setActiveTab("overview")}
           className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${
-            activeTab === "overview" ? "bg-blue-600 text-white" : "hover:bg-gray-700 text-gray-300"
+            activeTab === "overview"
+              ? "bg-blue-600 text-white"
+              : "hover:bg-gray-700 text-gray-300"
           }`}
         >
           <FaChartLine className="text-lg" /> Overview
@@ -66,7 +125,9 @@ const Researcher_profile = () => {
         <button
           onClick={() => setActiveTab("studies")}
           className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${
-            activeTab === "studies" ? "bg-blue-600 text-white" : "hover:bg-gray-700 text-gray-300"
+            activeTab === "studies"
+              ? "bg-blue-600 text-white"
+              : "hover:bg-gray-700 text-gray-300"
           }`}
         >
           <FaFlask className="text-lg" /> Studies
@@ -74,7 +135,9 @@ const Researcher_profile = () => {
         <button
           onClick={() => setActiveTab("datasets")}
           className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${
-            activeTab === "datasets" ? "bg-blue-600 text-white" : "hover:bg-gray-700 text-gray-300"
+            activeTab === "datasets"
+              ? "bg-blue-600 text-white"
+              : "hover:bg-gray-700 text-gray-300"
           }`}
         >
           <FaDatabase className="text-lg" /> Datasets
@@ -82,15 +145,19 @@ const Researcher_profile = () => {
         <button
           onClick={() => setActiveTab("wallet")}
           className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${
-            activeTab === "wallet" ? "bg-blue-600 text-white" : "hover:bg-gray-700 text-gray-300"
+            activeTab === "wallet"
+              ? "bg-blue-600 text-white"
+              : "hover:bg-gray-700 text-gray-300"
           }`}
         >
-          <FaWallet className="text-lg" /> Wallet
+          <FaWallet className="text-lg" /> Transaction
         </button>
         <button
           onClick={() => setActiveTab("settings")}
           className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${
-            activeTab === "settings" ? "bg-blue-600 text-white" : "hover:bg-gray-700 text-gray-300"
+            activeTab === "settings"
+              ? "bg-blue-600 text-white"
+              : "hover:bg-gray-700 text-gray-300"
           }`}
         >
           <FaCog className="text-lg" /> Settings
@@ -110,12 +177,12 @@ const Researcher_profile = () => {
     <div className="min-h-screen bg-black text-white flex flex-col">
       {/* Main Content with Sidebar */}
       <div className="flex flex-1">
-        {/* Sidebar for desktop */}
+        {/* Desktop Sidebar */}
         <aside className="w-64 bg-gray-900 p-6 hidden md:flex flex-col border-r border-gray-700">
           <SidebarContent />
         </aside>
 
-        {/* Mobile sidebar overlay */}
+        {/* Mobile Sidebar Overlay */}
         {sidebarOpen && (
           <div
             className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
@@ -123,7 +190,7 @@ const Researcher_profile = () => {
           ></div>
         )}
 
-        {/* Mobile sidebar */}
+        {/* Mobile Sidebar */}
         <motion.aside
           initial={{ x: "-100%" }}
           animate={{ x: sidebarOpen ? 0 : "-100%" }}
@@ -139,14 +206,14 @@ const Researcher_profile = () => {
           <SidebarContent />
         </motion.aside>
 
-        {/* Main content */}
+        {/* MAIN CONTENT */}
         <motion.main
           variants={fadeIn}
           initial="hidden"
           animate="visible"
           className="flex-1 flex flex-col min-h-screen md:ml-0"
         >
-          {/* Mobile menu button */}
+          {/* Mobile Menu Button */}
           <div className="p-6 md:p-8 pb-0">
             <button
               className="md:hidden mb-6 p-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition"
@@ -156,18 +223,13 @@ const Researcher_profile = () => {
             </button>
           </div>
 
-          {/* Content area that can scroll */}
           <div className="flex-1 overflow-y-auto p-6 md:p-8 pt-0">
-            {/* Overview Tab */}
+            {/* --------------------------------------------
+                OVERVIEW TAB
+            -------------------------------------------- */}
             {activeTab === "overview" && (
               <section>
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-3xl font-bold">Research Dashboard</h2>
-                  <div className="text-sm text-gray-400">
-                    Researcher ID: <span className="text-blue-400">{researcherData.researcherId}</span>
-                  </div>
-                </div>
-                
+                {/* Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                   <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
                     <div className="flex items-center gap-3 mb-2">
@@ -176,9 +238,11 @@ const Researcher_profile = () => {
                       </div>
                       <h3 className="text-lg font-semibold">Studies Conducted</h3>
                     </div>
-                    <p className="text-2xl font-bold text-blue-400">{researcherData.studiesConducted}</p>
+                    <p className="text-2xl font-bold text-blue-400">
+                      {researcherData.studiesConducted}
+                    </p>
                   </div>
-                  
+
                   <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-blue-500/20 rounded-lg">
@@ -186,19 +250,11 @@ const Researcher_profile = () => {
                       </div>
                       <h3 className="text-lg font-semibold">Datasets Accessed</h3>
                     </div>
-                    <p className="text-2xl font-bold text-blue-400">{researcherData.datasetsAccessed}</p>
+                    <p className="text-2xl font-bold text-blue-400">
+                      {researcherData.datasetsAccessed}
+                    </p>
                   </div>
-                  
-                  <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 bg-blue-500/20 rounded-lg">
-                        <FaWallet className="text-blue-400 text-lg" />
-                      </div>
-                      <h3 className="text-lg font-semibold">Tokens Available</h3>
-                    </div>
-                    <p className="text-2xl font-bold text-blue-400">{researcherData.tokensAvailable}</p>
-                  </div>
-                  
+
                   <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-blue-500/20 rounded-lg">
@@ -206,30 +262,36 @@ const Researcher_profile = () => {
                       </div>
                       <h3 className="text-lg font-semibold">Approval Rate</h3>
                     </div>
-                    <p className="text-2xl font-bold text-blue-400">{researcherData.approvalRate}</p>
+                    <p className="text-2xl font-bold text-blue-400">
+                      {researcherData.approvalRate}
+                    </p>
                   </div>
                 </div>
 
-                {/* Recent Studies Section */}
+                {/* Recent studies */}
                 <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
                   <div className="flex justify-between items-center mb-6">
                     <h3 className="text-xl font-semibold">Recent Studies</h3>
-                    <button className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded text-white transition text-sm">
-                      New Study
-                    </button>
                   </div>
+
                   <div className="space-y-4">
-                    {recentStudies.map(study => (
-                      <div key={study.id} className="flex justify-between items-center p-4 bg-gray-700/50 rounded-lg border border-gray-600">
+                    {recentStudies.map((study) => (
+                      <div
+                        key={study.id}
+                        className="flex justify-between items-center p-4 bg-gray-700/50 rounded-lg border border-gray-600"
+                      >
                         <div className="flex-1">
                           <h4 className="font-semibold text-white">{study.title}</h4>
                           <p className="text-gray-400 text-sm mt-1">{study.date}</p>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          study.status === "Completed" 
-                            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" 
-                            : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
-                        }`}>
+
+                        <span
+                          className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            study.status === "Completed"
+                              ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                              : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                          }`}
+                        >
                           {study.status}
                         </span>
                       </div>
@@ -239,41 +301,58 @@ const Researcher_profile = () => {
               </section>
             )}
 
-            {/* Studies Tab */}
+            {/* --------------------------------------------
+                STUDIES TAB
+            -------------------------------------------- */}
             {activeTab === "studies" && (
               <section>
-                <h2 className="text-3xl font-bold mb-6">Research Studies</h2>
                 <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
                   <div className="flex justify-between items-center mb-6">
-                    <p className="text-gray-300">Total studies conducted: <span className="text-blue-400 font-semibold">{researcherData.studiesConducted}</span></p>
-                    <button className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded text-white transition">
+                    <p className="text-gray-300">
+                      Total studies conducted:{" "}
+                      <span className="text-blue-400 font-semibold">
+                        {researcherData.studiesConducted}
+                      </span>
+                    </p>
+
+                    <button
+                      onClick={() => setOpenModal(true)}
+                      className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded text-white transition"
+                    >
                       + New Study
                     </button>
                   </div>
-                  
+
                   <div className="space-y-4">
-                    {recentStudies.map(study => (
-                      <div key={study.id} className="p-4 bg-gray-700/50 rounded-lg border border-gray-600">
+                    {recentStudies.map((study) => (
+                      <div
+                        key={study.id}
+                        className="p-4 bg-gray-700/50 rounded-lg border border-gray-600"
+                      >
                         <div className="flex justify-between items-start mb-3">
                           <h3 className="font-semibold text-lg text-white">{study.title}</h3>
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            study.status === "Completed" 
-                              ? "bg-blue-500/20 text-blue-400" 
-                              : "bg-yellow-500/20 text-yellow-400"
-                          }`}>
+                          <span
+                            className={`px-3 py-1 rounded-full text-sm font-medium ${
+                              study.status === "Completed"
+                                ? "bg-blue-500/20 text-blue-400"
+                                : "bg-yellow-500/20 text-yellow-400"
+                            }`}
+                          >
                             {study.status}
                           </span>
                         </div>
+
                         <p className="text-gray-400 text-sm mb-4">Created: {study.date}</p>
+
                         <div className="flex gap-2">
-                          <button className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded text-white transition text-sm">
+                          <button
+                            className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded text-white transition text-sm"
+                            onClick={() => {
+                              setSelectedStudy(study);
+                              setShowDetails(true);
+                            }}
+                          >
                             View Details
-                          </button>
-                          <button className="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded text-white transition text-sm">
-                            Export Data
-                          </button>
-                          <button className="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded text-white transition text-sm">
-                            Share
                           </button>
                         </div>
                       </div>
@@ -283,24 +362,31 @@ const Researcher_profile = () => {
               </section>
             )}
 
-            {/* Datasets Tab */}
+            {/* --------------------------------------------
+                DATASETS TAB
+            -------------------------------------------- */}
             {activeTab === "datasets" && (
               <section>
                 <h2 className="text-3xl font-bold mb-6">Accessed Datasets</h2>
                 <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
                   <div className="flex justify-between items-center mb-6">
                     <p className="text-gray-300">
-                      Total datasets accessed: <span className="text-blue-400 font-semibold">{researcherData.datasetsAccessed}</span>
+                      Total datasets accessed:{" "}
+                      <span className="text-blue-400 font-semibold">
+                        {researcherData.datasetsAccessed}
+                      </span>
                     </p>
                     <button className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded text-white transition">
                       Browse Datasets
                     </button>
                   </div>
-                  
+
                   <div className="text-center py-12 text-gray-400">
                     <FaDatabase size={64} className="mx-auto mb-4 opacity-50" />
                     <p className="text-lg mb-2">No datasets accessed yet</p>
-                    <p className="text-sm">Start by browsing the data marketplace to find relevant medical datasets</p>
+                    <p className="text-sm">
+                      Start by browsing the data marketplace to find relevant medical datasets
+                    </p>
                     <button className="mt-4 bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded text-white transition">
                       Explore Marketplace
                     </button>
@@ -309,53 +395,18 @@ const Researcher_profile = () => {
               </section>
             )}
 
-            {/* Wallet Tab */}
+            {/* --------------------------------------------
+                WALLET TAB
+            -------------------------------------------- */}
             {activeTab === "wallet" && (
               <section>
                 <h2 className="text-3xl font-bold mb-6">Wallet</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
-                    <h3 className="text-lg font-semibold mb-4 text-white">Token Balance</h3>
-                    <div className="text-center">
-                      <p className="text-4xl font-bold text-blue-400 mb-2">{researcherData.tokensAvailable}</p>
-                      <p className="text-gray-400">Available Tokens</p>
-                    </div>
-                  </div>
-                  <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
-                    <h3 className="text-lg font-semibold mb-4 text-white">Spending Summary</h3>
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">Total Spent:</span>
-                        <span className="text-red-400 font-semibold">{researcherData.tokensSpent} tokens</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">Datasets Accessed:</span>
-                        <span className="text-white font-semibold">{researcherData.datasetsAccessed}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">Average Cost:</span>
-                        <span className="text-white font-semibold">
-                          {researcherData.datasetsAccessed > 0 
-                            ? Math.round(researcherData.tokensSpent / researcherData.datasetsAccessed) 
-                            : 0} tokens/dataset
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
-                  <h3 className="text-xl font-semibold mb-4 text-white">Recent Transactions</h3>
-                  <div className="text-center py-8 text-gray-400">
-                    <FaWallet size={48} className="mx-auto mb-4 opacity-50" />
-                    <p>Your transaction history will appear here</p>
-                    <p className="text-sm mt-2">All dataset purchases and token transactions will be logged</p>
-                  </div>
-                </div>
               </section>
             )}
 
-            {/* Settings Tab */}
+            {/* --------------------------------------------
+                SETTINGS TAB
+            -------------------------------------------- */}
             {activeTab === "settings" && (
               <section>
                 <h2 className="text-3xl font-bold mb-6"> Settings</h2>
@@ -375,6 +426,133 @@ const Researcher_profile = () => {
           </div>
         </motion.main>
       </div>
+
+      {/* --------------------------------------------
+          NEW STUDY MODAL
+      -------------------------------------------- */}
+      {openModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            onClick={() => setOpenModal(false)}
+          ></div>
+
+          <div
+            className="relative bg-[#0F172A] border border-gray-700/40 shadow-2xl 
+                       rounded-2xl p-8 w-full max-w-lg text-white z-50
+                       animate-[fadeIn_0.2s_ease-out,scaleUp_0.25s_ease-out]"
+          >
+            <button
+              className="absolute top-3 right-3 text-gray-400 hover:text-white text-xl"
+              onClick={() => setOpenModal(false)}
+            >
+              ✕
+            </button>
+
+            <h3 className="text-3xl font-bold mb-6 text-center">Add New Research</h3>
+
+            <form onSubmit={handleStudySubmit} className="space-y-5">
+              <div>
+                <label className="block mb-1 text-gray-300">Research Title</label>
+                <input
+                  type="text"
+                  name="title"
+                  value={newStudy.title}
+                  onChange={handleStudyChange}
+                  required
+                  className="w-full border border-gray-700 rounded-xl px-4 py-3 bg-gray-800 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1 text-gray-300">Created On</label>
+                <input
+                  type="date"
+                  name="createdOn"
+                  value={newStudy.createdOn}
+                  onChange={handleStudyChange}
+                  required
+                  className="w-full border border-gray-700 rounded-xl px-4 py-3 bg-gray-800 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1 text-gray-300">Datasets Needed</label>
+                <textarea
+                  name="datasetNeeded"
+                  value={newStudy.datasetNeeded}
+                  onChange={handleStudyChange}
+                  placeholder="Eg: Bone dataset, Heart X-rays, MRI scans..."
+                  className="w-full border border-gray-700 rounded-xl px-4 py-3 bg-gray-800 text-white"
+                ></textarea>
+              </div>
+
+              <div>
+                <label className="block mb-1 text-gray-300">Type Required</label>
+                <select
+                  name="type"
+                  value={newStudy.type}
+                  onChange={handleStudyChange}
+                  required
+                  className="w-full border border-gray-700 rounded-lg px-3 py-2 bg-gray-800 text-white"
+                >
+                  <option value="">Select</option>
+                  <option value="Report">Report</option>
+                  <option value="Scan">Scan</option>
+                  <option value="X-ray">X-ray</option>
+                  <option value="Lab Test">Lab Test</option>
+                  <option value="Prescription">Prescription</option>
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold transition shadow-lg"
+              >
+                Add Research
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --------------------------------------------
+          VIEW DETAILS SLIDE-UP PANEL
+      -------------------------------------------- */}
+      {showDetails && selectedStudy && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end justify-center z-50"
+          onClick={() => setShowDetails(false)}
+        >
+          <div
+            className="bg-gray-900 w-full max-w-lg rounded-t-2xl p-6 animate-slideUp shadow-2xl border border-gray-700"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-xl font-bold mb-3">{selectedStudy.title}</h2>
+
+            <p className="text-gray-300 mb-2">
+              <strong>Date:</strong> {selectedStudy.date}
+            </p>
+
+            <p className="text-gray-300 mb-2">
+              <strong>Type:</strong> {selectedStudy.type}
+            </p>
+
+            <p className="text-gray-300 mb-2">
+              <strong>Dataset Needed:</strong>
+              <br />
+              {selectedStudy.datasetNeeded}
+            </p>
+
+            <button
+              className="w-full bg-blue-500 hover:bg-blue-600 rounded-lg py-2 mt-4"
+              onClick={() => setShowDetails(false)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
