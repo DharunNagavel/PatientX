@@ -13,7 +13,7 @@ const Navbar = ({ role }) => {
   const user = JSON.parse(localStorage.getItem('user'));
   const currentRole = user?.role || role;
   const isLoggedIn = !!currentRole; // Check if user is logged in
-
+  
   useEffect(() => {
     if (mobileMenuRef.current) {
       gsap.to(mobileMenuRef.current, {

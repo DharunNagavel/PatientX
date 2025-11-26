@@ -62,43 +62,31 @@ async function verifyContractDeployment() {
   }
 }
 
-// Get accounts from Hardhat and map to user IDs
+// Dynamic Hardhat accounts (UPDATED)
 async function getAccounts() {
   if (!cachedAccounts) {
-    try {
-      console.log('🔍 Fetching accounts from Hardhat network...');
-      
-      // Use Hardhat's default mnemonic to generate accounts
-      const mnemonic = "test test test test test test test test test test test junk";
-      const accountCount = 20; // Generate 20 accounts
-      
-      const accounts = [];
-      for (let i = 0; i < accountCount; i++) {
-        const wallet = ethers.HDNodeWallet.fromPhrase(mnemonic, `m/44'/60'/0'/0/${i}`);
-        accounts.push({
-          index: i,
-          address: wallet.address,
-          privateKey: wallet.privateKey,
-          wallet: wallet.connect(provider),
-          // Map: User ID 1 -> Account 0, User ID 2 -> Account 1, etc.
-          userId: i + 1 // This creates the mapping
-        });
-      }
-      
-      cachedAccounts = accounts;
-      console.log(`📋 Generated ${cachedAccounts.length} accounts from Hardhat mnemonic`);
-      console.log(`🔗 User ID to Account mapping:`);
-      cachedAccounts.forEach(acc => {
-        console.log(`   User ${acc.userId} → Account ${acc.index} (${acc.address})`);
+    console.log("🔍 Fetching accounts from Hardhat provider...");
+
+    const defaultAccounts = await provider.listAccounts();
+
+    const accounts = [];
+    for (let i = 0; i < defaultAccounts.length; i++) {
+      const wallet = await provider.getSigner(i);
+
+      accounts.push({
+        index: i,
+        address: defaultAccounts[i],
+        privateKey: null,
+        wallet: wallet,
+        userId: i + 1
       });
-      
-    } catch (error) {
-      console.error('❌ Error generating accounts from Hardhat:', error);
-      throw error;
     }
+
+    cachedAccounts = accounts;
   }
   return cachedAccounts;
 }
+
 
 // Enhanced user ID validation with better error messages and debugging
 function validateUserId(userId, functionName = "function") {
@@ -129,9 +117,11 @@ function validateUserId(userId, functionName = "function") {
     throw new Error(`Invalid user ID in ${functionName}: "${userId}" must be a positive number (1-20). Received: ${userInt}`);
   }
   
-  if (userInt > 20) {
-    throw new Error(`Invalid user ID in ${functionName}: "${userId}" exceeds maximum user ID of 20. Received: ${userInt}`);
-  }
+  if (cachedAccounts && userInt > cachedAccounts.length) {
+  throw new Error(
+    `Invalid user ID in ${functionName}: "${userInt}" exceeds available accounts (${cachedAccounts.length})`
+  );
+}
   
   console.log(`✅ User ID validated: ${userInt} for ${functionName}`);
   return userInt;

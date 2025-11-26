@@ -10,6 +10,7 @@ const Signup = ({setrole,setuser_id}) => {
     name: "",
     email: "",
     password: "",
+    conformPassword: "",
     phone: "",
   });
 

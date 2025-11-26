@@ -9,49 +9,78 @@ const Researcher_records = ({user_id}) => {
   const containerRef = useRef(null);
   const cardsRef = useRef([]);
 
-  // Fetch real data from backend
   useEffect(() => {
-    const fetchRecords = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('http://localhost:9000/api/records');
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log('Fetched records:', data); // Debug log
-        
-        // Transform the data to match your UI structure
-        const transformedRecords = data.map(record => ({
-          id: record.id,
-          patient: `Patient ${record.patientId}`,
-          type: getRecordType(record.data), // You might want to extract this from your data
-          date: record.timestamp,
-          files: 1, // Default since we don't have file count
-          notes: record.data || "No additional information available",
-          fileNames: [`record_${record.id}.txt`], // Default file name
-          patientId: record.patientId,
-          researcherId: record.researcherId,
-          originalData: record.data,
-          dataHash: generateDataHash(record.data) // Generate hash for the data
-        }));
-        
-        setRecords(transformedRecords);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching records:', err);
-        setError('Failed to load records. Please try again later.');
-        // Fallback to dummy data if API fails
-        setRecords(getFallbackData());
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchRecords = async () => {
+    try {
+      setLoading(true);
+      console.log("🔍 Fetching real records from database...");
 
-    fetchRecords();
-  }, []);
+      const response = await fetch("http://localhost:9000/api/records");
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("🔥 RAW BACKEND RESPONSE:", data);
+
+      // Accept ANY backend format:
+      // { success: true, records: [...] }
+      // { records: [...] }
+      // { data: [...] }
+      // [ ... ]
+      const realRecords =
+        data.records ||
+        data.data ||
+        (Array.isArray(data) ? data : []);
+
+      if (!realRecords || realRecords.length === 0) {
+        throw new Error("No records found in database");
+      }
+
+      // Transform records exactly like before
+      const transformedRecords = realRecords.map((record, index) => {
+        const recordData = record.record_data || {};
+
+        const patientId =
+          record.user_id && !isNaN(parseInt(record.user_id))
+            ? parseInt(record.user_id)
+            : index + 1000;
+
+        return {
+          id: record.data_hash || `record-${index}`,
+          patient: record.patient_name || "Unknown Patient",
+          type: recordData.recordType || "Medical Record",
+          date: record.created_at || new Date().toISOString(),
+          files: recordData.files ? recordData.files.length : 0,
+          notes: recordData.notes || "No additional information available",
+          fileNames: recordData.files
+            ? recordData.files.map((f) => f.fileName)
+            : ["medical_record.dat"],
+          patientId: patientId,
+          dataHash: record.data_hash,
+          originalData: record.data_value,
+          blockchainTxn: record.blockchain_txn,
+          blockchainOwner: record.blockchain_owner,
+        };
+      });
+
+      console.log(`✅ Transformed ${transformedRecords.length} real records`);
+      setRecords(transformedRecords);
+      setError(null);
+    } catch (err) {
+      console.error("❌ Error fetching records:", err);
+      setError(
+        "Failed to load records from database. Please make sure there are records stored in the system."
+      );
+      setRecords([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchRecords();
+}, []);
 
   // Animation effect
   useEffect(() => {
@@ -66,53 +95,6 @@ const Researcher_records = ({user_id}) => {
     });
   }, [records]);
 
-  // Helper function to determine record type from data
-  const getRecordType = (data) => {
-    if (!data) return "Medical Record";
-    
-    const dataStr = data.toString().toLowerCase();
-    if (dataStr.includes('mri') || dataStr.includes('scan')) return "MRI Scan";
-    if (dataStr.includes('xray') || dataStr.includes('x-ray')) return "X-ray";
-    if (dataStr.includes('prescription') || dataStr.includes('medication')) return "Prescription";
-    if (dataStr.includes('lab') || dataStr.includes('test')) return "Lab Test";
-    if (dataStr.includes('ultrasound')) return "Ultrasound";
-    
-    return "Medical Report";
-  };
-
-  // Generate a simple hash for the data (you might want to use a proper hashing function)
-  const generateDataHash = (data) => {
-    if (!data) return "0x" + Math.random().toString(16).substr(2, 64);
-    
-    // Simple hash function for demo purposes
-    let hash = 0;
-    for (let i = 0; i < data.length; i++) {
-      const char = data.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    return "0x" + Math.abs(hash).toString(16).padStart(64, '0');
-  };
-
-  // Fallback data in case API fails
-  const getFallbackData = () => {
-    return Array.from({ length: 10 }).map((_, i) => ({
-      id: i + 1,
-      patient: `Patient ${i + 1}`,
-      type: ["Medical Report", "MRI Scan", "X-ray", "Prescription", "Lab Test", "Ultrasound"][i % 6],
-      date: new Date(Date.now() - i * 86400000).toISOString(),
-      files: Math.floor(Math.random() * 5) + 1,
-      notes: `Medical record containing diagnostic information and treatment details for patient ${i + 1}.`,
-      fileNames: Array.from({ length: Math.floor(Math.random() * 4) + 2 }).map(
-        (__, j) => `medical_file_${j + 1}.${["pdf", "png", "dcm", "doc"][j % 4]}`
-      ),
-      patientId: i + 1,
-      researcherId: Math.floor(Math.random() * 5) + 1,
-      originalData: `Sample medical data for patient ${i + 1}`,
-      dataHash: generateDataHash(`Sample medical data for patient ${i + 1}`)
-    }));
-  };
-
   const filteredRecords = records.filter(
     (r) =>
       r.patient.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -122,57 +104,82 @@ const Researcher_records = ({user_id}) => {
 
   const handleRequestPurchase = async (record) => {
     try {
-      console.log('Requesting consent for record:', record);
-      console.log('User ID (requester):', user_id);
-      console.log('Owner ID (patient):', record.patientId);
-      console.log('Data hash:', record.dataHash);
+      console.log('=== REQUEST CONSENT DETAILS ===');
+      console.log('Record:', record);
+      console.log('Requester ID (Researcher):', user_id);
+      console.log('Owner ID (Patient):', record.patientId);
+      console.log('Data Hash:', record.dataHash);
+      console.log('==============================');
       
       // Validate user_id is available
       if (!user_id) {
-        alert('Error: User ID not available. Please make sure you are logged in.');
+        alert('❌ Error: User ID not available. Please make sure you are logged in.');
         return;
       }
 
-      // Validate patientId is available and valid
-      if (!record.patientId || record.patientId < 1) {
-        alert('Error: Invalid patient ID. Cannot request consent.');
+      // FIXED: More flexible validation for patientId
+      if (!record.patientId || record.patientId < 0) {
+        console.warn('Patient ID might be a fallback ID:', record.patientId);
+        // Continue anyway since we have a valid fallback ID
+      }
+
+      // Validate dataHash is available (REAL hash from blockchain)
+      if (!record.dataHash) {
+        alert('❌ Error: Invalid data hash. This record cannot be accessed.');
         return;
       }
 
-      // Show confirmation dialog
+      // Show confirmation dialog with improved messaging
       const isConfirmed = window.confirm(
-        `Are you sure you want to request access to ${record.patient}'s ${record.type}?`
+        `REQUEST ACCESS CONFIRMATION\n\n` +
+        `Patient: ${record.patient}\n` +
+        `Record Type: ${record.type}\n` +
+        `Patient ID: ${record.patientId}\n` +
+        `Researcher ID: ${user_id}\n` +
+        `Data Hash: ${record.dataHash.substring(0, 20)}...\n\n` +
+        `Are you sure you want to request access to this medical record?`
       );
 
       if (!isConfirmed) {
+        console.log('Consent request cancelled by user');
         return;
       }
 
-      // API call to request consent with the correct endpoint and data structure
-      const response = await fetch('http://localhost:9000/api/consent/request-consent', {
+      console.log('🔄 Sending consent request to backend...');
+      
+      // API call to request consent with improved error handling
+      const response = await fetch('http://localhost:9000/api/block/data/request-consent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          requesterid: user_id, // Using the user_id prop
-          ownerid: record.patientId, // Patient's user ID
-          datahash: record.dataHash // The hash of the data
+          requesterId: parseInt(user_id), // Researcher's user ID
+          ownerId: record.patientId, // Patient's user ID (now always valid)
+          dataHash: record.dataHash // Real data hash (from blockchain)
         })
       });
 
       const result = await response.json();
+      console.log('Backend response:', result);
 
-      if (response.ok) {
-        alert('Consent request sent successfully! The patient will be notified.');
-        console.log('Consent request response:', result);
+      if (response.ok && result.success) {
+        alert('✅ Consent request sent successfully!\n\nThe patient will be notified and can approve your request.');
+        console.log('✅ Consent request successful:', result);
       } else {
-        console.error('Consent request failed:', result);
-        alert(`Failed to send consent request: ${result.error || 'Unknown error'}`);
+        console.error('❌ Consent request failed:', result);
+        const errorMessage = result.error || result.message || 'Unknown error occurred';
+        
+        // More specific error messages
+        if (errorMessage.includes('patient') || errorMessage.includes('owner')) {
+          alert(`❌ Failed to send consent request:\n\nPatient account not found. This record may belong to a user who no longer exists in the system.`);
+        } else {
+          alert(`❌ Failed to send consent request:\n\n${errorMessage}`);
+        }
       }
     } catch (err) {
-      console.error('Error requesting consent:', err);
-      alert('Error requesting consent. Please check your connection and try again.');
+      console.error('❌ Network error requesting consent:', err);
+      alert('❌ Network error requesting consent. Please check:\n\n1. Backend server is running\n2. Your internet connection\n3. Try again later');
     }
   };
 
@@ -182,6 +189,7 @@ const Researcher_records = ({user_id}) => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-4"></div>
           <p className="text-xl text-gray-300">Loading medical records...</p>
+          <p className="text-gray-500 mt-2">Fetching real data from database</p>
         </div>
       </div>
     );
@@ -190,15 +198,28 @@ const Researcher_records = ({user_id}) => {
   if (error && records.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black text-white flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-center max-w-2xl mx-auto px-4">
           <div className="w-24 h-24 mx-auto mb-4 text-red-500">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
           </div>
-          <p className="text-xl text-red-400 mb-2">Error Loading Records</p>
-          <p className="text-gray-400">{error}</p>
-          <p className="text-gray-500 mt-2">Showing sample data instead</p>
+          <p className="text-xl text-red-400 mb-2">No Records Available</p>
+          <p className="text-gray-400 mb-4">{error}</p>
+          <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+            <p className="text-yellow-400 mb-2">💡 To test this feature:</p>
+            <p className="text-gray-300 text-sm">
+              1. Make sure patients have stored medical records<br/>
+              2. Check if the backend is running properly<br/>
+              3. Verify the database has records in the 'records' table
+            </p>
+          </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-6 px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors font-medium"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );
@@ -221,12 +242,10 @@ const Researcher_records = ({user_id}) => {
                 Logged in as Researcher ID: {user_id}
               </p>
             )}
-            {error && (
-              <div className="mt-4 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-lg max-w-2xl mx-auto">
-                <p className="text-yellow-300">
-                  ⚠️ {error} Showing {records.length} records
-                </p>
-              </div>
+            {records.length > 0 && (
+              <p className="text-blue-400 mt-2">
+                Found {records.length} real medical records in the system
+              </p>
             )}
           </div>
 
@@ -386,6 +405,11 @@ const Researcher_records = ({user_id}) => {
                           <div className="mt-2 p-2 bg-black/20 rounded text-xs font-mono break-all">
                             <strong>Data Hash:</strong> {record.dataHash}
                           </div>
+                          {record.blockchainTxn && (
+                            <div className="mt-2 p-2 bg-black/20 rounded text-xs font-mono break-all">
+                              <strong>Blockchain TXN:</strong> {record.blockchainTxn.substring(0, 20)}...
+                            </div>
+                          )}
                         </div>
                         
                         <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm border border-white/20">

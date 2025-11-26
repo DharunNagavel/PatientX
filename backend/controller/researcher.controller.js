@@ -34,7 +34,7 @@ export const getrecords = async (req, res) => {
       timestamp: record.timestamp
     }));
     console.log('Transformed records:', records); 
-    res.json(records);
+    res.send(result.rows);
   } catch (err) {
     console.error('Database error:', err);
     res.status(500).json({ error: 'Internal server error' });
