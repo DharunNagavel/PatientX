@@ -17,15 +17,14 @@ const Researcher_profile = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
 
-  /* -----------------------------
-      NEW STUDY MODAL STATES
-  ----------------------------- */
+  
   const [openModal, setOpenModal] = useState(false);
   const [newStudy, setNewStudy] = useState({
     title: "",
     createdOn: "",
     datasetNeeded: "",
     type: "",
+    status: ""
   });
 
   const handleStudyChange = (e) => {
@@ -37,12 +36,10 @@ const Researcher_profile = () => {
     e.preventDefault();
     console.log("New Study Created:", newStudy);
     setOpenModal(false);
-    setNewStudy({ title: "", createdOn: "", datasetNeeded: "", type: "" });
+    setNewStudy({ title: "", createdOn: "", datasetNeeded: "", type: "", status: "" });
   };
 
-  /* -----------------------------
-      VIEW DETAILS PANEL STATES
-  ----------------------------- */
+  
   const [showDetails, setShowDetails] = useState(false);
   const [selectedStudy, setSelectedStudy] = useState(null);
 
@@ -100,9 +97,7 @@ const Researcher_profile = () => {
     visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
   };
 
-  /* -----------------------------
-      SIDEBAR COMPONENT
-  ----------------------------- */
+  
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       <div className="flex flex-col items-center mb-10">
@@ -224,9 +219,7 @@ const Researcher_profile = () => {
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 md:p-8 pt-0">
-            {/* --------------------------------------------
-                OVERVIEW TAB
-            -------------------------------------------- */}
+        
             {activeTab === "overview" && (
               <section>
                 {/* Stats */}
@@ -301,9 +294,6 @@ const Researcher_profile = () => {
               </section>
             )}
 
-            {/* --------------------------------------------
-                STUDIES TAB
-            -------------------------------------------- */}
             {activeTab === "studies" && (
               <section>
                 <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
@@ -362,9 +352,6 @@ const Researcher_profile = () => {
               </section>
             )}
 
-            {/* --------------------------------------------
-                DATASETS TAB
-            -------------------------------------------- */}
             {activeTab === "datasets" && (
               <section>
                 <h2 className="text-3xl font-bold mb-6">Accessed Datasets</h2>
@@ -376,9 +363,7 @@ const Researcher_profile = () => {
                         {researcherData.datasetsAccessed}
                       </span>
                     </p>
-                    <button className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded text-white transition">
-                      Browse Datasets
-                    </button>
+
                   </div>
 
                   <div className="text-center py-12 text-gray-400">
@@ -395,18 +380,80 @@ const Researcher_profile = () => {
               </section>
             )}
 
-            {/* --------------------------------------------
-                WALLET TAB
-            -------------------------------------------- */}
-            {activeTab === "wallet" && (
-              <section>
-                <h2 className="text-3xl font-bold mb-6">Wallet</h2>
-              </section>
-            )}
+  {activeTab === "wallet" && (
+  <section className="text-gray-200">
+    <h2 className="text-3xl font-bold mb-6">Recent Transaction History</h2>
 
-            {/* --------------------------------------------
-                SETTINGS TAB
-            -------------------------------------------- */}
+    <div className="bg-gray-800 rounded-2xl p-5 shadow-lg">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-xl font-semibold">Transactions</h3>
+      </div>
+
+      {/* Transaction List */}
+      <div className="space-y-4">
+
+        {/* Transaction Item */}
+        <div className="flex items-center justify-between p-4 bg-gray-700 rounded-xl hover:bg-gray-600 transition">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center text-red-400 text-xl">
+              ₹
+            </div>
+
+            <div>
+              <p className="font-medium">Sent to: <span className="text-blue-300">Riya Sharma</span></p>
+              <p className="text-sm text-gray-400">
+                Razorpay • 28 Nov, 2025 • 5:21 PM
+              </p>
+            </div>
+          </div>
+
+          <p className="text-red-400 font-semibold">- ₹850</p>
+        </div>
+
+        {/* Transaction Item */}
+        <div className="flex items-center justify-between p-4 bg-gray-700 rounded-xl hover:bg-gray-600 transition">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center text-red-400 text-xl">
+              ₹
+            </div>
+
+            <div>
+              <p className="font-medium">Sent to: <span className="text-blue-300">Arun Kumar</span></p>
+              <p className="text-sm text-gray-400">
+                Razorpay • 27 Nov, 2025 • 2:10 PM
+              </p>
+            </div>
+          </div>
+
+          <p className="text-red-400 font-semibold">- ₹600</p>
+        </div>
+
+        {/* Transaction Item */}
+        <div className="flex items-center justify-between p-4 bg-gray-700 rounded-xl hover:bg-gray-600 transition">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center text-red-400 text-xl">
+              ₹
+            </div>
+
+            <div>
+              <p className="font-medium">Sent to: <span className="text-blue-300">Meera Devi</span></p>
+              <p className="text-sm text-gray-400">
+                Razorpay • 25 Nov, 2025 • 10:00 AM
+              </p>
+            </div>
+          </div>
+
+          <p className="text-red-400 font-semibold">- ₹1200</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+)}
+
+
+
             {activeTab === "settings" && (
               <section>
                 <h2 className="text-3xl font-bold mb-6"> Settings</h2>
@@ -426,10 +473,6 @@ const Researcher_profile = () => {
           </div>
         </motion.main>
       </div>
-
-      {/* --------------------------------------------
-          NEW STUDY MODAL
-      -------------------------------------------- */}
       {openModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
           <div
@@ -504,7 +547,15 @@ const Researcher_profile = () => {
                   <option value="Prescription">Prescription</option>
                 </select>
               </div>
-
+              <div>
+              <label className="block mb-1 text-gray-300">Status</label>
+              <label className="mr-4">
+                <input type="radio" name="status" value="Completed" /> Completed
+              </label>
+              <label>
+                <input type="radio" name="status" value="Inprogress" /> Inprogress
+              </label>
+             </div>
               <button
                 type="submit"
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold transition shadow-lg"
@@ -516,9 +567,6 @@ const Researcher_profile = () => {
         </div>
       )}
 
-      {/* --------------------------------------------
-          VIEW DETAILS SLIDE-UP PANEL
-      -------------------------------------------- */}
       {showDetails && selectedStudy && (
         <div
           className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end justify-center z-50"

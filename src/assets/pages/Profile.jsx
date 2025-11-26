@@ -1,5 +1,11 @@
 import React, { useState } from "react";
-import { FaUserCircle, FaFileMedical, FaWallet, FaCog, FaChevronRight } from "react-icons/fa";
+import {
+  FaUserCircle,
+  FaFileMedical,
+  FaWallet,
+  FaCog,
+  FaChevronRight
+} from "react-icons/fa";
 import { Menu, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -12,10 +18,8 @@ const Profile = () => {
   const userData = {
     name: "User",
     email: "pranitha@example.com",
-    patientId: "PX-203948",
-    recordsUploaded: 12,
+    recordsUploaded: 3,
     lastUpload: "Oct 10, 2025",
-    tokensEarned: 430,
   };
 
   const fadeIn = {
@@ -24,15 +28,13 @@ const Profile = () => {
   };
 
   const settingsOptions = [
-    "Update Name & Email",
+    "Update Profile",
     "Change Password",
-    "Two-Factor Authentication (2FA)",
     "Login Activity",
     "Email Notifications",
     "Language Preferences",
+    "Download My Data",
     "Delete Account",
-    "Deactivate Account",
-    "Download Data",
   ];
 
   const SidebarContent = () => (
@@ -52,6 +54,7 @@ const Profile = () => {
         >
           <FaUserCircle /> Overview
         </button>
+
         <button
           onClick={() => setActiveTab("records")}
           className={`flex items-center gap-3 px-3 py-2 rounded-lg ${
@@ -60,14 +63,16 @@ const Profile = () => {
         >
           <FaFileMedical /> Records
         </button>
+
         <button
           onClick={() => setActiveTab("wallet")}
           className={`flex items-center gap-3 px-3 py-2 rounded-lg ${
             activeTab === "wallet" ? "bg-blue-600" : "hover:bg-gray-700"
           }`}
         >
-          <FaWallet /> Wallet
+          <FaWallet /> History
         </button>
+
         <button
           onClick={() => setActiveTab("settings")}
           className={`flex items-center gap-3 px-3 py-2 rounded-lg ${
@@ -89,7 +94,7 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-black text-white flex">
-      {/* Sidebar for lg screens */}
+      {/* Sidebar for large screens */}
       <aside className="w-64 bg-black/30 backdrop-blur-lg p-6 hidden md:flex flex-col border-r border-gray-600">
         <SidebarContent />
       </aside>
@@ -101,6 +106,7 @@ const Profile = () => {
           onClick={() => setSidebarOpen(false)}
         ></div>
       )}
+
       <motion.aside
         initial={{ x: "-100%" }}
         animate={{ x: sidebarOpen ? 0 : "-100%" }}
@@ -131,48 +137,102 @@ const Profile = () => {
           <Menu size={24} />
         </button>
 
-        {/* Overview */}
+        {/* OVERVIEW */}
         {activeTab === "overview" && (
           <section>
             <h2 className="text-3xl font-bold mb-6">Dashboard Overview</h2>
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="bg-gray-900 p-6 rounded-xl text-center border border-gray-600">
-                <h3 className="text-lg font-semibold">Patient ID</h3>
-                <p className="text-2xl mt-2">{userData.patientId}</p>
-              </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
               <div className="bg-gray-900 p-6 rounded-xl text-center border border-gray-600">
                 <h3 className="text-lg font-semibold">Records Uploaded</h3>
                 <p className="text-2xl mt-2">{userData.recordsUploaded}</p>
               </div>
+
               <div className="bg-gray-900 p-6 rounded-xl text-center border border-gray-600">
-                <h3 className="text-lg font-semibold">Tokens Earned</h3>
-                <p className="text-2xl mt-2">{userData.tokensEarned}</p>
+                <h3 className="text-lg font-semibold">Recent Activity</h3>
+                <p className="text-gray-300 mt-2">
+                  Last upload: {userData.lastUpload}
+                </p>
               </div>
             </div>
           </section>
         )}
 
-        {/* Records */}
+        {/* RECORDS */}
         {activeTab === "records" && (
           <section>
-            <h2 className="text-3xl font-bold mb-6">Uploaded Records</h2>
-            <p className="text-gray-300">Last uploaded: {userData.lastUpload}</p>
+            <h2 className="text-3xl font-bold mb-6">My Uploaded Records</h2>
+
+            <div className="space-y-4">
+              <div className="bg-gray-900 p-4 rounded-xl border border-gray-700">
+                <h3 className="font-semibold text-lg">Blood Report - PDF</h3>
+                <p className="text-gray-400 text-sm">Uploaded on 10 Oct 2025</p>
+              </div>
+
+              <div className="bg-gray-900 p-4 rounded-xl border border-gray-700">
+                <h3 className="font-semibold text-lg">MRI Scan Report</h3>
+                <p className="text-gray-400 text-sm">Uploaded on 15 Sep 2025</p>
+              </div>
+
+              <div className="bg-gray-900 p-4 rounded-xl border border-gray-700">
+                <h3 className="font-semibold text-lg">X-Ray Chest Image</h3>
+                <p className="text-gray-400 text-sm">Uploaded on 2 Sep 2025</p>
+              </div>
+            </div>
           </section>
         )}
 
-        {/* Wallet */}
+        {/* WALLET HISTORY */}
         {activeTab === "wallet" && (
           <section>
-            <h2 className="text-3xl font-bold mb-6">Wallet</h2>
-            <p className="text-gray-300">
-              You’ve earned{" "}
-              <span className="text-green-400">{userData.tokensEarned}</span>{" "}
-              tokens.
-            </p>
+            <h2 className="text-3xl font-bold mb-6">Activity History</h2>
+
+            <div className="space-y-4">
+              {/* ACCEPTED */}
+              <div className="flex justify-between items-center p-4 rounded-xl bg-gray-900 border border-gray-700">
+                <div>
+                  <p className="font-semibold text-green-400">
+                    Dr. Riya Sharma
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    10 Oct 2025 • 4:20 PM
+                  </p>
+                </div>
+                <span className="text-green-400 font-semibold">Accepted</span>
+              </div>
+
+              {/* DECLINED */}
+              <div className="flex justify-between items-center p-4 rounded-xl bg-gray-900 border border-gray-700">
+                <div>
+                  <p className="font-semibold text-red-400">
+                     Dr. Arun Kumar
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    5 Oct 2025 • 11:00 AM
+                  </p>
+                </div>
+                <span className="text-red-400 font-semibold">Declined</span>
+              </div>
+
+              {/* PAID */}
+              <div className="flex justify-between items-center p-4 rounded-xl bg-gray-900 border border-gray-700">
+                <div>
+                  <p className="font-semibold text-blue-400">
+                    Paid by Dr. Meera Devi (Razorpay)
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    28 Sep 2025 • 2:14 PM
+                  </p>
+                </div>
+                <span className="text-blue-400 font-semibold">
+                  ₹500 Received
+                </span>
+              </div>
+            </div>
           </section>
         )}
 
-        {/* Settings */}
+        {/* SETTINGS */}
         {activeTab === "settings" && (
           <section>
             <h2 className="text-3xl font-bold mb-6">Settings</h2>
