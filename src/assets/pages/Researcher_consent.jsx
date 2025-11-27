@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 
 const Researcher_consent = ({ user_id }) => {
   const [consentRequests, setConsentRequests] = useState([]);
@@ -111,72 +112,62 @@ const Researcher_consent = ({ user_id }) => {
     }
   };
 
-  // Handle withdraw access (for approved requests)
-  const handleWithdraw = async (request) => {
-    if (!window.confirm('Are you sure you want to withdraw access to this data?')) {
-      return;
-    }
+  const handlePay = async (request) => {
+  try {
+    console.log("🟦 Handle Pay Started", request);
 
-    try {
-      const response = await fetch('http://localhost:9000/api/block/data/withdraw-access', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          requestId: request.backendData.requestId,
-          ownerId: request.backendData.ownerId
-        }),
-      });
+    const ownerId = request.backendData.ownerId;
+    const requesterId = user_id;
+    const dataHash = request.backendData.dataHash;
 
-      const data = await response.json();
+    console.log("🟩 Sending order create request...");
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to withdraw access');
+    const orderRes = await axios.post("http://localhost:9000/api/payment/create-order", {
+      ownerId,
+      requesterId,
+      dataHash
+    });
+
+    console.log("🟩 Order Created:", orderRes.data);
+
+    const { order } = orderRes.data;
+
+    const options = {
+      key: "rzp_test_RkToOcKUrHAgk3",
+      amount: order.amount,
+      currency: order.currency,
+      name: "PatientX",
+      description: "Data Purchase",
+      order_id: order.id,
+      handler: async function (response) {
+        try {
+          console.log("🟩 Razorpay Success Response:", response);
+
+          const verifyRes = await axios.post("http://localhost:9000/api/payment/verify-payment", {
+            ...response,
+            ownerId,
+            requesterId,
+            dataHash
+          });
+
+          console.log("🟩 Verification Success:", verifyRes.data);
+          alert("Payment successful!");
+        } catch (err) {
+          console.error("❌ Verification Error:", err);
+        }
       }
+    };
 
-      if (data.success) {
-        setConsentRequests(prev =>
-          prev.map(req =>
-            req.id === request.id
-              ? { ...req, status: "withdrawn" }
-              : req
-          )
-        );
-        console.log('✅ Access withdrawn successfully');
-      }
-    } catch (err) {
-      console.error('❌ Error withdrawing access:', err);
-      alert('Error withdrawing access: ' + err.message);
-    }
-  };
-
-  // Handle view data (for approved requests)
-  const handleViewData = async (request) => {
-    try {
-      const response = await fetch(`http://localhost:9000/api/block/data/getdata/${request.backendData.dataHash}?requesterId=${user_id}`);
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch data');
-      }
-
-      if (data.consentVerified) {
-        console.log('📊 Data accessed:', data.data);
-        // Display data in a more user-friendly way
-        const recordData = data.data;
-        const fileInfo = recordData.files ? 
-          `Files: ${recordData.files.length} file(s)` : 
-          'No files attached';
-        
-        alert(`✅ Data accessed successfully!\n\nRecord Type: ${recordData.recordType}\n${fileInfo}\nNotes: ${recordData.notes || 'No notes'}\nRate: ₹${recordData.rate || 0}`);
-      }
-    } catch (err) {
-      console.error('❌ Error viewing data:', err);
-      alert('Error accessing data: ' + err.message);
-    }
-  };
+    const rzp1 = new window.Razorpay(options);
+    rzp1.on("payment.failed", function (response) {
+  console.error("❌ PAYMENT FAILED:", response.error.description);
+  alert("Oops! Something went wrong.\nPayment Failed");
+});
+    rzp1.open();
+  } catch (err) {
+    console.error("❌ MAIN PAYMENT ERROR:", err);
+  }
+};
 
   // Filter requests based on status
   const filteredRequests = consentRequests.filter(request => {
@@ -373,15 +364,11 @@ const Researcher_consent = ({ user_id }) => {
                           Withdraw Access
                         </button> */}
 
-                        <button
-                          onClick={() => handleViewData(request)}
+                        <button onClick={() => handlePay(request)}
                           className="bg-green-500 hover:bg-green-600 px-4 py-2 rounded transition flex items-center gap-2"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                          View Data
+                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-indian-rupee-icon lucide-indian-rupee"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg>
+                          Pay
                         </button>
                       </>
                     )}

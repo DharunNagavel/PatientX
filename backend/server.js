@@ -5,6 +5,8 @@ import cors from "cors";
 import authRouter from "./routes/auth.route.js";
 import dataRouter from "./routes/data.route.js";
 import researcherRouter from "./routes/researcher.route.js";
+import paymentRoutes from "./routes/payments.route.js";
+import profileRouter from "./routes/profile.route.js";
 
 const app = express();
 
@@ -18,6 +20,9 @@ app.use(express.urlencoded({ limit: "200mb", extended: true })); // handles form
 app.use("/api/auth", authRouter);
 app.use("/api/block/data", dataRouter);
 app.use("/api", researcherRouter);
+app.use("/api/payment", paymentRoutes);
+app.use("/api",profileRouter)
+
 
 // ✅ PostgreSQL connection
 pool

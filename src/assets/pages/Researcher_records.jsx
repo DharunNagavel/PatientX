@@ -1,22 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 
-const Researcher_records = () => {
+const Researcher_records = ({user_id}) => {
   const [records, setRecords] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [requestedRecords, setRequestedRecords] = useState(new Set());
-  const [pendingPaymentRecords, setPendingPaymentRecords] = useState(new Set());
-  const [purchasedRecords, setPurchasedRecords] = useState(new Set());
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedRecord, setSelectedRecord] = useState(null);
-  const [paymentAmount, setPaymentAmount] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const containerRef = useRef(null);
   const cardsRef = useRef([]);
-  
-  // Get user_id from localStorage or sessionStorage
-  const user_id = localStorage.getItem('user_id') || sessionStorage.getItem('user_id') || null;
 
   useEffect(() => {
   const fetchRecords = async () => {
@@ -91,7 +82,7 @@ const Researcher_records = () => {
   fetchRecords();
 }, []);
 
-  // Animate cards with GSAP
+  // Animation effect
   useEffect(() => {
     cardsRef.current.forEach((card) => {
       if (card) {
@@ -107,7 +98,8 @@ const Researcher_records = () => {
   const filteredRecords = records.filter(
     (r) =>
       r.patient.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.type.toLowerCase().includes(searchTerm.toLowerCase())
+      r.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (r.notes && r.notes.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const handleRequestPurchase = async (record) => {
@@ -174,7 +166,6 @@ const Researcher_records = () => {
       if (response.ok && result.success) {
         alert('✅ Consent request sent successfully!\n\nThe patient will be notified and can approve your request.');
         console.log('✅ Consent request successful:', result);
-        setRequestedRecords(prev => new Set([...prev, record.id]));
       } else {
         console.error('❌ Consent request failed:', result);
         const errorMessage = result.error || result.message || 'Unknown error occurred';
@@ -192,44 +183,7 @@ const Researcher_records = () => {
     }
   };
 
-  const handleInitiatePayment = (record) => {
-    setSelectedRecord(record);
-    setPaymentAmount(record.price || 0);
-    setShowPaymentModal(true);
-  };
-
-  const handlePaymentComplete = () => {
-    if (selectedRecord) {
-      console.log('Processing payment for:', selectedRecord.id);
-      setPurchasedRecords(prev => new Set([...prev, selectedRecord.id]));
-      setShowPaymentModal(false);
-      alert('✅ Payment successful! You can now access the record.');
-    }
-  };
-
-  // Get status badge for a record
-  const getStatusBadge = (record) => {
-    if (requestedRecords.has(record.id)) {
-      return (
-        <span className="inline-block px-3 py-1 bg-yellow-500/20 text-yellow-300 rounded-full text-sm font-medium border border-yellow-500/30">
-          Request Sent
-        </span>
-      );
-    }
-    if (pendingPaymentRecords.has(record.id)) {
-      return (
-        <span className="inline-block px-3 py-1 bg-green-500/20 text-green-300 rounded-full text-sm font-medium border border-green-500/30">
-          Ready to Pay
-        </span>
-      );
-    }
-    if (purchasedRecords.has(record.id)) {
-      return (
-        <span className="inline-block px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-sm font-medium border border-blue-500/30">
-          Purchased
-        </span>
-      );
-    }
+  if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black text-white flex items-center justify-center">
         <div className="text-center">
@@ -239,40 +193,9 @@ const Researcher_records = () => {
         </div>
       </div>
     );
-  };
+  }
 
-  // Get action button for a record
-  const getActionButton = (record) => {
-    if (requestedRecords.has(record.id)) {
-      return (
-        <button 
-          disabled
-          className="flex-1 bg-gray-600 text-gray-400 py-3 px-4 rounded-lg font-medium text-sm cursor-not-allowed"
-        >
-          Request Pending...
-        </button>
-      );
-    }
-    if (pendingPaymentRecords.has(record.id)) {
-      return (
-        <button 
-          onClick={() => handleInitiatePayment(record)}
-          className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg transition-all duration-300 font-medium text-sm shadow-lg hover:shadow-green-500/25 hover:scale-105"
-        >
-          Pay ${record.price}
-        </button>
-      );
-    }
-    if (purchasedRecords.has(record.id)) {
-      return (
-        <button 
-          onClick={() => alert(`Accessing ${record.patient}'s ${record.type}...`)}
-          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg transition-all duration-300 font-medium text-sm shadow-lg hover:shadow-blue-500/25 hover:scale-105"
-        >
-          Access Data
-        </button>
-      );
-    }
+  if (error && records.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black text-white flex items-center justify-center">
         <div className="text-center max-w-2xl mx-auto px-4">
@@ -300,79 +223,10 @@ const Researcher_records = () => {
         </div>
       </div>
     );
-  };
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black text-white">
-      {/* Payment Modal */}
-      {showPaymentModal && selectedRecord && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-2xl p-8 max-w-md w-full border border-gray-700">
-            <h3 className="text-2xl font-bold text-white mb-2">Complete Payment</h3>
-            <p className="text-gray-400 mb-6">
-              Purchase {selectedRecord.patient}'s {selectedRecord.type}
-            </p>
-            
-            <div className="bg-gray-700/50 rounded-xl p-4 mb-6">
-              <div className="flex justify-between items-center mb-4">
-                <span className="text-gray-300">Amount:</span>
-                <span className="text-2xl font-bold text-white">${selectedRecord.price}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-400">Record Type:</span>
-                <span className="text-gray-300">{selectedRecord.type}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm mt-2">
-                <span className="text-gray-400">Files Included:</span>
-                <span className="text-gray-300">{selectedRecord.files}</span>
-              </div>
-            </div>
-
-            {/* Payment Method Selection */}
-            <div className="mb-6">
-              <label className="block text-gray-300 text-sm font-medium mb-3">
-                Payment Method
-              </label>
-              <div className="space-y-2">
-                <label className="flex items-center p-3 border border-gray-600 rounded-lg hover:bg-gray-700/50 cursor-pointer">
-                  <input type="radio" name="payment" className="text-blue-500" defaultChecked />
-                  <span className="ml-3 text-gray-300">Credit/Debit Card</span>
-                </label>
-                <label className="flex items-center p-3 border border-gray-600 rounded-lg hover:bg-gray-700/50 cursor-pointer">
-                  <input type="radio" name="payment" className="text-blue-500" />
-                  <span className="ml-3 text-gray-300">Cryptocurrency</span>
-                </label>
-                <label className="flex items-center p-3 border border-gray-600 rounded-lg hover:bg-gray-700/50 cursor-pointer">
-                  <input type="radio" name="payment" className="text-blue-500" />
-                  <span className="ml-3 text-gray-300">Bank Transfer</span>
-                </label>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowPaymentModal(false)}
-                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 px-4 rounded-lg transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handlePaymentComplete}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg transition-colors font-medium shadow-lg hover:shadow-green-500/25"
-              >
-                Pay ${selectedRecord.price}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <nav className="fixed top-0 left-0 w-full h-16 bg-gray-900/80 backdrop-blur-md text-white z-40 shadow-lg flex items-center px-6 border-b border-gray-700">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-          Researcher Portal
-        </h1>
-      </nav>
-      
       <div className="pt-20 pb-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
@@ -395,11 +249,12 @@ const Researcher_records = () => {
             )}
           </div>
 
+          {/* Search */}
           <div className="mb-8 max-w-2xl mx-auto">
-            <div className="relative">
+            <div className="relative mt-10">
               <input
                 type="text"
-                placeholder="Search by patient name or record type..."
+                placeholder="Search by patient name, record type, or content..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-6 py-4 rounded-2xl bg-gray-800/50 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg backdrop-blur-sm"
@@ -412,13 +267,20 @@ const Researcher_records = () => {
             </div>
           </div>
 
+          {/* Results Count */}
           <div className="mb-6 px-2">
             <p className="text-gray-400 text-lg">
               Showing <span className="text-white font-semibold">{filteredRecords.length}</span> of{" "}
               <span className="text-white font-semibold">{records.length}</span> records
+              {searchTerm && (
+                <span className="text-blue-400 ml-2">
+                  for "{searchTerm}"
+                </span>
+              )}
             </p>
           </div>
 
+          {/* Records Grid */}
           <div
             ref={containerRef}
             className="overflow-y-auto"
@@ -456,16 +318,20 @@ const Researcher_records = () => {
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex-1 min-w-0">
                           <h3 className="text-xl font-bold text-white mb-2 truncate">{record.patient}</h3>
-                          {getStatusBadge(record)}
+                          <div className="flex flex-wrap gap-2">
+                            <span className="inline-block px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-sm font-medium border border-blue-500/30">
+                              {record.type}
+                            </span>
+                            <span className="inline-block px-2 py-1 bg-green-500/20 text-green-300 rounded-full text-xs border border-green-500/30">
+                              ID: {record.patientId}
+                            </span>
+                          </div>
                         </div>
                         <div className="text-right ml-4 flex-shrink-0">
                           <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-sm">
                             {record.files}
                           </div>
                           <p className="text-xs text-gray-400 mt-1">Files</p>
-                          {!purchasedRecords.has(record.id) && (
-                            <p className="text-green-400 text-sm font-bold mt-1">${record.price}</p>
-                          )}
                         </div>
                       </div>
 
@@ -474,18 +340,22 @@ const Researcher_records = () => {
                           <svg className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
-                          <span className="text-sm truncate">{new Date(record.date).toLocaleDateString('en-US', { 
-                            year: 'numeric', 
-                            month: 'short', 
-                            day: 'numeric' 
-                          })}</span>
+                          <span className="text-sm truncate">
+                            {new Date(record.date).toLocaleDateString('en-US', { 
+                              year: 'numeric', 
+                              month: 'short', 
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
                         </div>
                         <p className="text-gray-400 text-sm leading-relaxed line-clamp-4">
                           {record.notes}
                         </p>
                       </div>
                     </div>
-
+                    
                     <div className="mt-auto pt-4 border-t border-gray-700/50">
                       <div className="flex flex-wrap gap-1">
                         {record.fileNames.slice(0, 2).map((name, i) => (
@@ -507,11 +377,8 @@ const Researcher_records = () => {
 
                     {/* Hover Overlay */}
                     <div 
-                      className="absolute inset-0 bg-gray-900/95 backdrop-blur-md rounded-2xl flex flex-col opacity-0 transition-all duration-500 group-hover:opacity-100 z-10 overflow-hidden border-2 border-blue-500/30"
-                      style={{
-                        scrollbarWidth: "none",
-                        msOverflowStyle: "none"
-                      }}
+                      className="absolute inset-0 bg-gradient-to-br from-blue-900/95 to-purple-900/95 backdrop-blur-md rounded-2xl flex flex-col opacity-0 transition-all duration-500 group-hover:opacity-100 z-10 overflow-hidden"
+                      style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                     >
                       <style jsx>{`
                         .hover-content::-webkit-scrollbar {
@@ -522,22 +389,18 @@ const Researcher_records = () => {
                         <div className="text-center mb-6">
                           <h4 className="text-2xl font-bold text-white mb-2">{record.type}</h4>
                           <p className="text-blue-400 text-lg">Detailed View</p>
-                          {!purchasedRecords.has(record.id) && (
-                            <div className="mt-2 bg-green-500/20 border border-green-500/30 rounded-lg py-2 px-4">
-                              <p className="text-green-300 font-semibold">Price: ${record.price}</p>
-                            </div>
-                          )}
                         </div>
-
-                        <div className="bg-gray-800/80 rounded-xl p-4 mb-4 backdrop-blur-sm border border-gray-700">
+                        
+                        <div className="bg-white/10 rounded-xl p-4 mb-4 backdrop-blur-sm border border-white/20">
                           <h5 className="text-white font-semibold text-lg mb-2">Patient Information</h5>
                           <p className="text-white/90 mb-1"><strong>Name:</strong> {record.patient}</p>
+                          <p className="text-white/90 mb-1"><strong>Patient ID:</strong> {record.patientId}</p>
                           <p className="text-white/90 mb-1"><strong>Record Type:</strong> {record.type}</p>
-                          <p className="text-white/90"><strong>Date:</strong> {new Date(record.date).toLocaleDateString()}</p>
+                          <p className="text-white/90"><strong>Date:</strong> {new Date(record.date).toLocaleString()}</p>
                         </div>
-
-                        <div className="bg-gray-800/80 rounded-xl p-4 mb-4 backdrop-blur-sm border border-gray-700">
-                          <h5 className="text-white font-semibold text-lg mb-2">Clinical Notes</h5>
+                        
+                        <div className="bg-white/10 rounded-xl p-4 mb-4 backdrop-blur-sm border border-white/20">
+                          <h5 className="text-white font-semibold text-lg mb-2">Record Data</h5>
                           <p className="text-white/90 leading-relaxed text-sm">{record.notes}</p>
                           <div className="mt-2 p-2 bg-black/20 rounded text-xs font-mono break-all">
                             <strong>Data Hash:</strong> {record.dataHash}
@@ -548,8 +411,8 @@ const Researcher_records = () => {
                             </div>
                           )}
                         </div>
-
-                        <div className="bg-gray-800/80 rounded-xl p-4 backdrop-blur-sm border border-gray-700">
+                        
+                        <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm border border-white/20">
                           <h5 className="text-white font-semibold text-lg mb-3">Attached Files ({record.fileNames.length})</h5>
                           <div className="grid grid-cols-1 gap-2">
                             {record.fileNames.map((name, i) => (
@@ -574,9 +437,14 @@ const Researcher_records = () => {
                             ))}
                           </div>
                         </div>
-
-                        <div className="flex gap-3 mt-6 pt-4 border-t border-gray-700">
-                          {getActionButton(record)}
+                        
+                        <div className="flex gap-3 mt-6 pt-4 border-t border-white/20">
+                          <button 
+                            onClick={() => handleRequestPurchase(record)}
+                            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg transition-colors font-medium text-sm"
+                          >
+                            Request Access
+                          </button>
                         </div>
                       </div>
                     </div>
