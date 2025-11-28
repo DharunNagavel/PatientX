@@ -22,7 +22,7 @@ const Researcher_consent = ({ user_id }) => {
       
       console.log(`🔍 Fetching consent requests for researcher: ${researcherId}`);
       
-      const response = await fetch(`http://localhost:9000/api/block/data/researcher-requests/${researcherId}`);
+      const response = await fetch(`https://patientx.onrender.com/api/block/data/researcher-requests/${researcherId}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -79,7 +79,7 @@ const Researcher_consent = ({ user_id }) => {
     }
 
     try {
-      const response = await fetch('http://localhost:9000/api/block/data/cancel-request', {
+      const response = await fetch('https://patientx.onrender.com/api/block/data/cancel-request', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -122,7 +122,7 @@ const Researcher_consent = ({ user_id }) => {
 
     console.log("🟩 Sending order create request...");
 
-    const orderRes = await axios.post("http://localhost:9000/api/payment/create-order", {
+    const orderRes = await axios.post("https://patientx.onrender.com/api/payment/create-order", {
       ownerId,
       requesterId,
       dataHash
@@ -143,7 +143,7 @@ const Researcher_consent = ({ user_id }) => {
         try {
           console.log("🟩 Razorpay Success Response:", response);
 
-          const verifyRes = await axios.post("http://localhost:9000/api/payment/verify-payment", {
+          const verifyRes = await axios.post("https://patientx.onrender.com/api/payment/verify-payment", {
             ...response,
             ownerId,
             requesterId,

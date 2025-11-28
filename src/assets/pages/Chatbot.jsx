@@ -40,7 +40,7 @@ const Chatbot = () => {
   setInputMessage("");
 
   // Call backend
-  fetch("http://localhost:5001/chatbot", {
+  fetch("https://patientx-ai.onrender.com/chatbot", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message: msg })

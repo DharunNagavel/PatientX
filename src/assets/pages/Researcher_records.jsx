@@ -15,7 +15,7 @@ const Researcher_records = ({user_id}) => {
       setLoading(true);
       console.log("🔍 Fetching real records from database...");
 
-      const response = await fetch("http://localhost:9000/api/records");
+      const response = await fetch("https://patientx.onrender.com/api/records");
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -149,7 +149,7 @@ const Researcher_records = ({user_id}) => {
       console.log('🔄 Sending consent request to backend...');
       
       // API call to request consent with improved error handling
-      const response = await fetch('http://localhost:9000/api/consent/request-consent', {
+      const response = await fetch('https://patientx.onrender.com/api/consent/request-consent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
