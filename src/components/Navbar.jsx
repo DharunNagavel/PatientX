@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, X, LogOut } from "lucide-react";
+import gsap from "gsap";
 import Logo from "/Logo.png";
 
 const Navbar = ({ role }) => {
