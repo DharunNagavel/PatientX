@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, X, LogOut } from "lucide-react";
-import Logo from "../assets/Logo.png";
-import { gsap } from "gsap";
+import Logo from "src/assets/Logo.png";
 
 const Navbar = ({ role }) => {
   const [isOpen, setIsOpen] = useState(false);
