@@ -2,7 +2,6 @@ import bcrypt from 'bcryptjs';
 import pool from '../db.js';
 import JWT from 'jsonwebtoken';
 import { JWT_SECRET, JWT_EXPIRES_IN } from "../config/env.js";
-import { u } from 'framer-motion/client';
 
 export const signup = async (req, res) => {
   const { username, mail, phone, password, role } = req.body;
