@@ -1,132 +1,210 @@
-from flask import Flask, request, jsonify
-import numpy as np
-import pandas as pd
+# app.py
 import os
-import pickle
+import tempfile
+import numpy as np
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 import joblib
-from tensorflow.keras.models import Model as KerasModel
-from tensorflow.keras.preprocessing import image
-from tensorflow.keras.applications.resnet50 import preprocess_input
-import pytesseract
-import cv2
+from PIL import Image
+import pdfplumber
+from docx import Document
+import pandas as pd
+from chatbot.chat import CompleteHealthBot
 
-# Suppress TensorFlow logs
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+# Optional OCR import - used only if tesseract executable installed
+try:
+    import pytesseract
+    TESSERACT_AVAILABLE = True
+except Exception:
+    pytesseract = None
+    TESSERACT_AVAILABLE = False
 
-# Initialize Flask
+BASE_PRICE = 200.0
+
+# ---------- Load model + scaler safely ----------
+data = joblib.load("pricing_model_and_scaler.pkl")  # update path if required
+
+if isinstance(data, dict):
+    model = data.get("model")
+    scaler = data.get("scaler", None)
+elif isinstance(data, tuple) and len(data) == 2:
+    model, scaler = data
+else:
+    model = data
+    scaler = None
+
+print("Model loaded:", model is not None)
+print("Scaler loaded:", scaler is not None)
+print("Tesseract available:", TESSERACT_AVAILABLE)
+
 app = Flask(__name__)
+CORS(app)
 
-# ----------------------------
-# Load AI Models
-# ----------------------------
+# ---------- Helper: extract_text -------------------------------------------------
+def extract_text(file_path):
+    """Return (text, pages, word_count, image_count, tables_count). Non-fatal errors return reasonable defaults."""
+    ext = os.path.splitext(file_path)[1].lower()
+    text = ""
+    pages = 1
+    image_count = 0
+    tables_count = 0
 
-# AI Model 1: Hybrid Medical AI (text + image + sensor)
-with open("hybrid_medical_model.pkl", "rb") as f:
-    hybrid_model = pickle.load(f)
-
-# AI Model 4: Tabular Medical Prediction Model
-bundle = joblib.load("medical_pipeline.pkl")
-tabular_model = bundle['model']
-tabular_scaler = bundle['scaler']
-tabular_le = bundle['label_encoder']
-
-# TODO: Load other models (Model 2, Model 3) if available
-# model2 = ...
-# model3 = ...
-
-# ----------------------------
-# Routes
-# ----------------------------
-
-@app.route('/api/hybrid_model', methods=['POST'])
-def run_hybrid_model():
-    """
-    Input JSON example:
-    {
-        "text_features": [0.1, 0.2, ...],
-        "image_path": "path/to/image.jpg",
-        "sensor_data": [1.0, 2.0]
-    }
-    """
-    data = request.json
     try:
-        # Extract text features
-        X_text = np.array([data.get("text_features", np.zeros(100))])
+        if ext == ".pdf":
+            with pdfplumber.open(file_path) as pdf:
+                pages = len(pdf.pages)
+                for page in pdf.pages:
+                    text += page.extract_text() or ""
+                    image_count += len(getattr(page, "images", []))
+                    tables = page.find_tables()
+                    tables_count += len(tables) if tables else 0
 
-        # Process image input
-        img_path = data.get("image_path")
-        if img_path and os.path.exists(img_path):
-            img = image.load_img(img_path, target_size=(224, 224))
-            x = image.img_to_array(img)
-            x = np.expand_dims(x, axis=0)
-            X_image = preprocess_input(x)
+        elif ext in [".jpg", ".jpeg", ".png", ".tiff", ".bmp"]:
+            # Use OCR only if tesseract installed; otherwise skip OCR and return empty text
+            if TESSERACT_AVAILABLE:
+                img = Image.open(file_path)
+                try:
+                    text = pytesseract.image_to_string(img)
+                except Exception as e:
+                    print("Tesseract OCR failed for image:", e)
+                    text = ""
+            else:
+                print("Skipping OCR for image (tesseract not available)")
+                text = ""
+            image_count = 1
+            pages = 1
+
+        elif ext in [".docx", ".doc"]:
+            doc = Document(file_path)
+            paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+            text = "\n".join(paragraphs)
+            pages = max(1, len(paragraphs) // 20 + 1)
+
+        elif ext == ".csv":
+            df = pd.read_csv(file_path, dtype=str, errors="ignore")
+            text = df.fillna("").astype(str).to_string()
+            tables_count = 1
+            pages = max(1, len(df) // 40 + 1)
+
+        elif ext in [".xls", ".xlsx"]:
+            xls = pd.read_excel(file_path, sheet_name=None)
+            parts = []
+            total_rows = 0
+            for sheetname, df in xls.items():
+                df = df.fillna("").astype(str)
+                total_rows += len(df)
+                if len(df):
+                    parts.append(df.to_string())
+            text = "\n\n".join(parts)
+            tables_count = len(xls)
+            pages = max(1, total_rows // 40 + 1)
+
         else:
-            X_image = np.zeros((1, 2048))  # Fallback if no image provided
+            # try plain text read
+            with open(file_path, "r", errors="ignore") as f:
+                text = f.read()
+            pages = max(1, len(text.splitlines()) // 40 + 1)
 
-        # Process sensor input
-        X_sensor = np.array([data.get("sensor_data", [0, 0])])
+    except Exception as exc:
+        print("Error extracting text from", file_path, exc)
 
-        # Model prediction
-        pred = hybrid_model.predict({
-            "text_input": X_text,
-            "image_input": X_image,
-            "sensor_input": X_sensor
+    word_count = len(text.split())
+    return text, pages, word_count, image_count, tables_count
+
+# ---------- Prediction route -----------------------------------------------------
+@app.route("/predict-price", methods=["POST"])
+def predict_price():
+    # Accept multiple files in the "files" field (client should append multiple entries named "files")
+    if "files" not in request.files:
+        return jsonify({"success": False, "error": "No files uploaded (expected field name: files)"}), 400
+
+    uploaded_files = request.files.getlist("files")
+    if not uploaded_files:
+        return jsonify({"success": False, "error": "No valid files received"}), 400
+
+    total_price = 0.0
+    per_file = []
+
+    for f in uploaded_files:
+        # Save to temporary file
+        suffix = os.path.splitext(f.filename)[1] or ""
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+        file_path = tmp.name
+        try:
+            f.save(file_path)
+        except Exception as e:
+            print("Failed to save uploaded file:", e)
+            # cleanup and continue
+            try:
+                os.remove(file_path)
+            except:
+                pass
+            continue
+
+        # Extract features
+        text, pages, word_count, image_count, tables_count = extract_text(file_path)
+
+        features = np.array([[pages, word_count, image_count, tables_count, len(text)]])
+
+        # apply scaler if present (try/except to avoid crash)
+        try:
+            if scaler is not None:
+                features = scaler.transform(features)
+        except Exception as e:
+            print("Scaler transform failed, using raw features:", e)
+
+        # predict
+        try:
+            pred = float(model.predict(features)[0])
+        except Exception as e:
+            print("Model prediction failed for file:", f.filename, e)
+            pred = BASE_PRICE
+
+        pred = max(BASE_PRICE, round(pred, 2))
+        per_file.append({"fileName": f.filename, "predicted": pred})
+        total_price += pred
+
+        # cleanup tmp file
+        try:
+            os.remove(file_path)
+        except:
+            pass
+
+    return jsonify({
+        "success": True,
+        "predicted_price": round(total_price, 2),
+        "details": per_file
+    }), 200
+
+chatbot_model, msg = CompleteHealthBot.load_chatbot("health_bot.pkl")
+print(msg)
+
+# If no saved bot exists, create new one
+if chatbot_model is None:
+    chatbot_model = CompleteHealthBot()
+
+@app.route("/chatbot", methods=["POST"])
+def chatbot():
+    try:
+        data = request.json
+        user_msg = data.get("message", "")
+
+        if user_msg.strip() == "":
+            return jsonify({"error": "Message is empty"}), 400
+
+        # generate response
+        bot_reply = chatbot_model.chat(user_msg)
+
+        # save chatbot state
+        chatbot_model.save_chatbot("health_bot.pkl")
+
+        return jsonify({
+            "success": True,
+            "reply": bot_reply
         })
 
-        pred_class = np.argmax(pred, axis=1).tolist()
-        return jsonify({"prediction": pred_class, "raw_output": pred.tolist()})
-
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
-
-@app.route('/api/tabular_model', methods=['POST'])
-def run_tabular_model():
-    """
-    Input JSON example:
-    {
-        "HbA1c": 5.8,
-        "Hemoglobin": 13.5,
-        "Cholesterol": 180,
-        "Blood_Pressure": 120,
-        "Heart_Rate": 75,
-        "BMI": 22.5
-    }
-    """
-    try:
-        features = request.json
-        X_input = np.array([[
-            features.get("HbA1c", 0),
-            features.get("Hemoglobin", 0),
-            features.get("Cholesterol", 0),
-            features.get("Blood_Pressure", 0),
-            features.get("Heart_Rate", 0),
-            features.get("BMI", 0)
-        ]])
-
-        X_scaled = tabular_scaler.transform(X_input)
-        pred = tabular_model.predict(X_scaled)
-        pred_label = tabular_le.inverse_transform(pred)
-        return jsonify({"prediction": pred_label.tolist()})
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route('/api/model2', methods=['POST'])
-def run_model2():
-    """Placeholder for AI Model 2"""
-    return jsonify({"message": "Model 2 endpoint not implemented yet."})
-
-
-@app.route('/api/model3', methods=['POST'])
-def run_model3():
-    """Placeholder for AI Model 3"""
-    return jsonify({"message": "Model 3 endpoint not implemented yet."})
-
-
-# ----------------------------
-# Run Server
-# ----------------------------
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+if __name__ == "__main__":
+    app.run(port=5001, debug=True)

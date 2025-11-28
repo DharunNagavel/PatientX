@@ -8,15 +8,15 @@ const Research = () => {
   useEffect(() => {
     const fetchResearchers = async () => {
       try {
-        const response = await fetch('http://localhost:9000/api/researchersdata');
+        const response = await fetch("http://localhost:9000/api/researchersdata");
         if (!response.ok) {
-          throw new Error('Failed to fetch researchers');
+          throw new Error("Failed to fetch researchers");
         }
         const data = await response.json();
         setResearchersData(data);
       } catch (err) {
         setError(err.message);
-        console.error('Error fetching researchers:', err);
+        console.error("Error fetching researchers:", err);
       } finally {
         setLoading(false);
       }
@@ -45,6 +45,7 @@ const Research = () => {
     <div className="min-h-screen bg-black text-white">
       <div className="pt-24 px-6 max-w-5xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Researchers on our Platform</h1>
+
         <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {researchersData.map((researcher) => (
             <div
@@ -58,19 +59,38 @@ const Research = () => {
                 />
                 <h2 className="text-xl font-semibold text-center">{researcher.name}</h2>
                 <p className="text-gray-400 text-center">{researcher.field}</p>
-                <p className="text-gray-400 text-center mb-3">{researcher.institution}</p>
+                <p className="text-gray-400 text-center mb-3">
+                  {researcher.institution}
+                </p>
               </div>
+
+              {/* Hover info */}
               <div className="absolute inset-0 bg-gray-900 bg-opacity-95 p-4 rounded-xl opacity-0 translate-y-full group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 flex flex-col items-center justify-start overflow-auto max-h-96 z-10">
                 <h3 className="font-bold text-lg mb-2">Ongoing Research</h3>
+
                 <ul className="list-disc list-inside text-gray-300 text-sm">
                   {Array.isArray(researcher.ongoingResearch) ? (
                     researcher.ongoingResearch.map((topic, i) => (
-                      <li key={i}>{topic}</li>
+                      <li key={i}>
+                        {/* FIX: Render object fields instead of object */}
+                        {typeof topic === "object" ? (
+                          <div>
+                            <div><strong>{topic.title}</strong></div>
+                            <div>Type: {topic.type}</div>
+                            <div>Status: {topic.status}</div>
+                            <div>Created On: {topic.createdOn}</div>
+                            <div>Dataset Needed: {topic.datasetNeeded}</div>
+                          </div>
+                        ) : (
+                          topic
+                        )}
+                      </li>
                     ))
                   ) : (
-                    <li>{researcher.ongoingResearch}</li>
+                    <li>{String(researcher.ongoingResearch)}</li>
                   )}
                 </ul>
+
                 <p className="mt-4 text-gray-400 text-sm">
                   Contact: {researcher.contact}
                 </p>

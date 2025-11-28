@@ -56,7 +56,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/researcher_consent" element={<Researcher_consent user_id={user_id} />} />
           <Route path="/researcher_records" element={<Researcher_records user_id={user_id} />} />
-          <Route path="/researcher_profile" element={<Researcher_profile />} />
+          <Route path="/researcher_profile" element={<Researcher_profile user_id={user_id}/>} />
           <Route path="/records" element={<Records user_id={user_id} role={role} />} />
           <Route path="/research" element={<Research role={role} />} />
           <Route path="/consent" element={<Consent user_id={user_id} role={role} />} />

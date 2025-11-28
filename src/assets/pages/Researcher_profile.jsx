@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import { useState,useEffect } from "react";
+import { Link } from "react-router-dom";
+import axios from "axios";
 import {
   FaUserCircle,
   FaFlask,
@@ -11,13 +13,13 @@ import {
 import { Menu, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import Researcher_records from './Researcher_records';
 
-const Researcher_profile = () => {
+const Researcher_profile = ({user_id}) => {
   const [activeTab, setActiveTab] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
-
-  
+  const [savedStudies, setSavedStudies] = useState([]);  
   const [openModal, setOpenModal] = useState(false);
   const [newStudy, setNewStudy] = useState({
     title: "",
@@ -32,12 +34,47 @@ const Researcher_profile = () => {
     setNewStudy((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleStudySubmit = (e) => {
-    e.preventDefault();
-    console.log("New Study Created:", newStudy);
+  useEffect(() => {
+  fetchSavedStudies();
+}, []);
+const fetchSavedStudies = async () => {
+  try {
+    const res = await axios.get(`http://localhost:9000/api/get-research/${user_id}`);
+    setSavedStudies(res.data.research || []);
+  } catch (err) {
+    console.error("Failed to fetch studies", err);
+  }
+};
+
+
+
+const handleStudySubmit = async (e) => {
+  e.preventDefault();
+
+  try {
+    const res = await axios.post("http://localhost:9000/api/add-research", {
+      user_id: user_id,  // Must be passed as prop
+      newStudy: newStudy,
+    });
+
+    alert("New study added successfully");
+    fetchSavedStudies();
+
+    // close modal and reset
     setOpenModal(false);
-    setNewStudy({ title: "", createdOn: "", datasetNeeded: "", type: "", status: "" });
-  };
+    setNewStudy({
+      title: "",
+      createdOn: "",
+      datasetNeeded: "",
+      type: "",
+      status: "",
+    });
+
+  } catch (err) {
+    alert("Failed to add study");
+    console.error(err);
+  }
+};
 
   
   const [showDetails, setShowDetails] = useState(false);
@@ -52,32 +89,7 @@ const Researcher_profile = () => {
     approvalRate: "92%",
   };
 
-  const recentStudies = [
-    {
-      id: 1,
-      title: "Cardiovascular Disease Patterns",
-      date: "Oct 15, 2025",
-      status: "Completed",
-      datasetNeeded: "Heart X-rays, ECG reports",
-      type: "X-ray"
-    },
-    {
-      id: 2,
-      title: "Diabetes Treatment Analysis",
-      date: "Oct 12, 2025",
-      status: "In Progress",
-      datasetNeeded: "Blood sugar profiles, Insulin test reports",
-      type: "Lab Test"
-    },
-    {
-      id: 3,
-      title: "Mental Health Trends",
-      date: "Oct 8, 2025",
-      status: "Completed",
-      datasetNeeded: "Brain MRI scans, mood tracking dataset",
-      type: "Scan"
-    },
-  ];
+  const recentStudies = savedStudies.slice(0, 4); // only 4 studies for overview
 
   const settingsOptions = [
     "Update Research Profile",
@@ -232,7 +244,7 @@ const Researcher_profile = () => {
                       <h3 className="text-lg font-semibold">Studies Conducted</h3>
                     </div>
                     <p className="text-2xl font-bold text-blue-400">
-                      {researcherData.studiesConducted}
+                      {savedStudies.length}
                     </p>
                   </div>
 
@@ -244,7 +256,7 @@ const Researcher_profile = () => {
                       <h3 className="text-lg font-semibold">Datasets Accessed</h3>
                     </div>
                     <p className="text-2xl font-bold text-blue-400">
-                      {researcherData.datasetsAccessed}
+                      {/* {researcherData.datasetsAccessed} */}0
                     </p>
                   </div>
 
@@ -256,7 +268,7 @@ const Researcher_profile = () => {
                       <h3 className="text-lg font-semibold">Approval Rate</h3>
                     </div>
                     <p className="text-2xl font-bold text-blue-400">
-                      {researcherData.approvalRate}
+                      {/* {researcherData.approvalRate} */}0
                     </p>
                   </div>
                 </div>
@@ -275,7 +287,7 @@ const Researcher_profile = () => {
                       >
                         <div className="flex-1">
                           <h4 className="font-semibold text-white">{study.title}</h4>
-                          <p className="text-gray-400 text-sm mt-1">{study.date}</p>
+                          <p className="text-gray-400 text-sm mt-1">{study.createdOn}</p>
                         </div>
 
                         <span
@@ -301,7 +313,7 @@ const Researcher_profile = () => {
                     <p className="text-gray-300">
                       Total studies conducted:{" "}
                       <span className="text-blue-400 font-semibold">
-                        {researcherData.studiesConducted}
+                        {savedStudies.length}
                       </span>
                     </p>
 
@@ -314,7 +326,7 @@ const Researcher_profile = () => {
                   </div>
 
                   <div className="space-y-4">
-                    {recentStudies.map((study) => (
+                   {savedStudies.map((study) => (
                       <div
                         key={study.id}
                         className="p-4 bg-gray-700/50 rounded-lg border border-gray-600"
@@ -332,7 +344,7 @@ const Researcher_profile = () => {
                           </span>
                         </div>
 
-                        <p className="text-gray-400 text-sm mb-4">Created: {study.date}</p>
+                        <p className="text-gray-400 text-sm mb-4">Created: {study.createdOn}</p>
 
                         <div className="flex gap-2">
                           <button
@@ -360,7 +372,7 @@ const Researcher_profile = () => {
                     <p className="text-gray-300">
                       Total datasets accessed:{" "}
                       <span className="text-blue-400 font-semibold">
-                        {researcherData.datasetsAccessed}
+                        {/* {researcherData.datasetsAccessed} */}0
                       </span>
                     </p>
 
@@ -372,9 +384,9 @@ const Researcher_profile = () => {
                     <p className="text-sm">
                       Start by browsing the data marketplace to find relevant medical datasets
                     </p>
-                    <button className="mt-4 bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded text-white transition">
-                      Explore Marketplace
-                    </button>
+                    <Link to={"/researcher_records"}>
+                      <button className="mt-4 bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded text-white transition">Explore Marketplace</button>
+                    </Link>
                   </div>
                 </div>
               </section>
@@ -550,10 +562,23 @@ const Researcher_profile = () => {
               <div>
               <label className="block mb-1 text-gray-300">Status</label>
               <label className="mr-4">
-                <input type="radio" name="status" value="Completed" /> Completed
+                <input
+                  type="radio"
+                  name="status"
+                  value="Completed"
+                  checked={newStudy.status === "Completed"}
+                  onChange={handleStudyChange}
+                /> Completed
               </label>
+
               <label>
-                <input type="radio" name="status" value="Inprogress" /> Inprogress
+                <input
+                  type="radio"
+                  name="status"
+                  value="Inprogress"
+                  checked={newStudy.status === "Inprogress"}
+                  onChange={handleStudyChange}
+                /> Inprogress
               </label>
              </div>
               <button
@@ -579,7 +604,7 @@ const Researcher_profile = () => {
             <h2 className="text-xl font-bold mb-3">{selectedStudy.title}</h2>
 
             <p className="text-gray-300 mb-2">
-              <strong>Date:</strong> {selectedStudy.date}
+              <strong>Date:</strong> {selectedStudy.createdOn}
             </p>
 
             <p className="text-gray-300 mb-2">

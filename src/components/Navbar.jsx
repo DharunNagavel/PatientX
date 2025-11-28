@@ -1,18 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, X, LogOut } from "lucide-react";
-import Logo from "../assets/logo.png";
-import { gsap } from "gsap";
+import Logo from "/Logo.png";
 
 const Navbar = ({ role }) => {
   const [isOpen, setIsOpen] = useState(false);
   const mobileMenuRef = useRef(null);
   const navigate = useNavigate();
 
-  // Get user from localStorage for persistence
-  const user = JSON.parse(localStorage.getItem('user'));
-  const currentRole = user?.role || role;
-  const isLoggedIn = !!currentRole; // Check if user is logged in
+const currentRole = role;
+const isLoggedIn = role !== null && role !== undefined && role !== "";
+
   
   useEffect(() => {
     if (mobileMenuRef.current) {
@@ -26,7 +24,6 @@ const Navbar = ({ role }) => {
   }, [isOpen]);
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
     navigate("/");
     window.location.reload(); // Refresh to reset state
   };
@@ -50,27 +47,27 @@ const Navbar = ({ role }) => {
 
   // Default menu (when not logged in) - Only Signup, no Login
   const defaultMenuItems = [
-    { name: "Home", path: "/" },
-    { name: "Records", path: "/records" },
-    { name: "Researcher", path: "/research" },
-    ...(role === "Researcher"
-      ? [{ name: "Consent", path: "/researcher_consent" }]
-      : [{ name: "Consent", path: "/consent" }]), 
-    { name: "Signup", path: "/signup" },
-    // Login removed - users can navigate to login from signup page if needed
-  ];
+  { name: "Home", path: "/" },
+  { name: "Records", path: "/signup" },
+  { name: "Researcher", path: "/signup" },
+  { name: "Consent", path: "/signup" },
+  { name: "Signup", path: "/signup" },
+];
+
 
   // Determine which menu to show based on login status and role
   const getMenuItems = () => {
-    if (!isLoggedIn) {
-      return defaultMenuItems;
-    } else if (currentRole === 'Patient') {
-      return patientMenuItems;
-    } else if (currentRole === 'Researcher') {
-      return researcherMenuItems;
-    }
+  if (!isLoggedIn) {
     return defaultMenuItems;
-  };
+  }
+  if (currentRole === "Patient") {
+    return patientMenuItems;
+  }
+  if (currentRole === "Researcher") {
+    return researcherMenuItems;
+  }
+  return defaultMenuItems;
+};
 
   const menuItems = getMenuItems();
 

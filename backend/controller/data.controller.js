@@ -13,104 +13,103 @@ function generateHash(data) {
 }
 
 // Store data + metadata - UPDATED TO STORE FILE CONTENT
-// Store data + metadata - UPDATED WITH VALIDATION
 export const storeData = async (req, res) => {
   try {
-    const { userId, type, rate, notes, files: fileData } = req.body;
-    
+    const { userId, type, rate, notes, files: fileData, amount } = req.body;
+
     console.log(`🔧 storeData called with userId: ${userId}, type: ${type}`);
-    
-    // Validate userId before proceeding
+
     if (!userId) {
       return res.status(400).json({ error: "userId is required" });
     }
-    
+
     const userIdInt = parseInt(userId);
     if (isNaN(userIdInt) || userIdInt < 1) {
-      return res.status(400).json({ 
-        error: `Invalid userId: ${userId}. Must be a positive number starting from 1.` 
+      return res.status(400).json({
+        error: `Invalid userId: ${userId}. Must be a positive number starting from 1.`
       });
     }
-    
+
     if (!type) {
       return res.status(400).json({ error: "type is required" });
     }
 
-    // Handle file content from request
+    // -----------------------------
+    // Process Files (Base64)
+    // -----------------------------
     const files = [];
-    
-    // If files are sent as base64 encoded content in the request body
+
     if (fileData && Array.isArray(fileData)) {
       fileData.forEach(file => {
         files.push({
           fileName: file.fileName,
-          content: file.content, // base64 encoded file content
-          mimeType: file.mimeType || 'application/octet-stream',
+          content: file.content,
+          mimeType: file.mimeType || "application/octet-stream",
           size: file.size || 0
         });
       });
     }
 
-    // If files are uploaded via multipart/form-data (if you configure multer)
-    if (req.files && Array.isArray(req.files)) {
-      req.files.forEach(file => {
-        files.push({
-          fileName: file.originalname,
-          content: file.buffer.toString('base64'), // Convert buffer to base64
-          mimeType: file.mimetype,
-          size: file.size
-        });
-      });
-    }
+    // -----------------------------
+    // FIXED: Amount & Rate
+    // -----------------------------
+    const finalRate = parseInt(rate) || parseInt(amount) || 0;
+    const finalAmount = parseInt(amount) || parseInt(rate) || 0;
 
-    // Create the medical record structure with actual file content
     const medicalRecord = {
       recordType: type,
-      files: files,
-      rate: parseInt(rate) || 0,
+      files,
+      rate: finalRate,
+      amount: finalAmount,
       notes: notes || "",
       createdAt: new Date().toISOString()
     };
 
-    // Convert to string for blockchain storage
+    // Convert record to string for blockchain
     const dataString = JSON.stringify(medicalRecord);
     const hash = generateHash(dataString);
-    
-    console.log(`💾 Storing medical record for user ${userIdInt}`);
-    console.log(`📋 Record Type: ${type}`);
-    console.log(`📁 Files: ${files.length} files with actual content`);
-    console.log(`💰 Rate: ₹${rate}`);
 
-    // Store on blockchain - use the validated userIdInt
+    console.log(`💾 Storing medical record for user ${userIdInt}`);
+    console.log(`💰 Rate: ₹${finalRate}, Amount: ₹${finalAmount}`);
+
+    // Store on blockchain
     const blockchainResult = await storeDataOnBlockchain(dataString, userIdInt);
 
-    // Store in database
+    // Save in Database
     await pool.query(
-      "INSERT INTO records (user_id, data_hash, data_value, blockchain_txn, blockchain_owner) VALUES ($1, $2, $3, $4, $5)",
-      [userIdInt, hash, dataString, blockchainResult.transactionHash, blockchainResult.owner]
+      "INSERT INTO records (user_id, data_hash, data_value, blockchain_txn, blockchain_owner, amount) VALUES ($1, $2, $3, $4, $5, $6)",
+      [
+        userIdInt,
+        hash,
+        dataString,
+        blockchainResult.transactionHash,
+        blockchainResult.owner,
+        finalAmount  // FIXED
+      ]
     );
 
-    res.json({ 
+    res.json({
       success: true,
-      message: "Medical record stored successfully", 
+      message: "Medical record stored successfully",
       txnHash: blockchainResult.transactionHash,
       dataHash: hash,
       owner: blockchainResult.owner,
-      userAccount: `Account ${blockchainResult.accountIndex}`,
       record: {
         ...medicalRecord,
-        files: medicalRecord.files.map(f => ({ 
-          fileName: f.fileName, 
+        files: medicalRecord.files.map(f => ({
+          fileName: f.fileName,
           size: f.size,
-          mimeType: f.mimeType 
+          mimeType: f.mimeType
         }))
       }
     });
+
   } catch (err) {
-    console.error('❌ Error in storeData:', err);
+    console.error("❌ Error in storeData:", err);
     res.status(500).json({ error: "Server error: " + err.message });
   }
 };
+
 
 // REQUEST CONSENT - User asks for access to someone's data
 export const requestConsent = async (req, res) => {
