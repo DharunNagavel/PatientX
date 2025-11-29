@@ -149,7 +149,7 @@ const Researcher_records = ({user_id}) => {
       console.log('🔄 Sending consent request to backend...');
       
       // API call to request consent with improved error handling
-      const response = await fetch('https://patientx.onrender.com/api/consent/request-consent', {
+      const response = await fetch('https://patientx.onrender.com/api/block/data/request-consent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
