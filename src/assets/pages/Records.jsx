@@ -92,7 +92,7 @@ const handleFileChange = (e) => {
       setLoading(true);
       console.log(`🔄 Fetching records for user: ${user_id}`);
       
-      const response = await fetch(`https://patientx.onrender.com/api/block/data/user/${user_id}`);
+      const response = await fetch(`http://localhost:9000/api/block/data/user/${user_id}`);
       
       console.log('Response status:', response.status);
       
@@ -181,7 +181,7 @@ const handleFileChange = (e) => {
       console.log('Sending data to backend:', { ...requestData, files: filesData.length });
 
       // Send to backend
-      const response = await fetch('https://patientx.onrender.com/api/block/data/storedata', {
+      const response = await fetch('http://localhost:9000/api/block/data/storedata', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

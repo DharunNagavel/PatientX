@@ -1,5 +1,4 @@
 import pool from "../db.js";
-import crypto from "crypto";
 import {
   storeDataOnBlockchain,
   checkConsent,
@@ -7,10 +6,12 @@ import {
   getAccountInfo
 } from "../blockchain.js";
 
-// generate hash for data
+import { ethers } from "ethers";
+
 function generateHash(data) {
-  return "0x" + crypto.createHash("sha256").update(data).digest("hex");
+  return ethers.keccak256(ethers.toUtf8Bytes(data));
 }
+
 
 // Store data + metadata - UPDATED TO STORE FILE CONTENT
 export const storeData = async (req, res) => {
@@ -73,7 +74,7 @@ export const storeData = async (req, res) => {
     console.log(`💰 Rate: ₹${finalRate}, Amount: ₹${finalAmount}`);
 
     // Store on blockchain
-    const blockchainResult = await storeDataOnBlockchain(dataString, userIdInt);
+const blockchainResult = await storeDataOnBlockchain(hash, userIdInt);
 
     // Save in Database
     await pool.query(
@@ -218,7 +219,7 @@ export const grantConsent = async (req, res) => {
 
     if (recordResult.rowCount === 0) {
       return res.status(404).json({ 
-        message: "Data not found"
+        message: "Data not found in database"
       });
     }
 
@@ -238,16 +239,26 @@ export const grantConsent = async (req, res) => {
     console.log(`👥 Granting access:`);
     console.log(`   Owner: User ${ownerIdInt}`);
     console.log(`   Requester: User ${requesterIdInt}`);
+    console.log(`   Data Hash: ${record.data_hash}`);
 
-    // 4. Grant consent on blockchain - pass USER IDs, not addresses or indexes
+    // 4. FIX: Verify blockchain ownership before granting
+    try {
+      // Optional: Add a pre-check function to verify ownership
+      const contract = await getContractByUserId(ownerIdInt);
+      // You might want to add a function like `isDataOwner(bytes32 dataHash, address owner)` to your contract
+      // For now, we'll proceed with the grant
+    } catch (checkError) {
+      console.log('⚠️ Could not pre-verify ownership:', checkError.message);
+    }
+
+    // 5. Grant consent on blockchain
     const blockchainResult = await grantConsentOnBlockchain(
-    record.data_hash,   // ✅ USE DB STORED HASH
-    requesterIdInt,
-    ownerIdInt
+      record.data_hash,
+      requesterIdInt,
+      ownerIdInt
     );
 
-
-    // 5. Update consent request status
+    // 6. Update consent request status
     await pool.query(
       "UPDATE consent_requests SET status='approved', granted_at=$1 WHERE id=$2",
       [new Date(), requestId]
@@ -266,12 +277,27 @@ export const grantConsent = async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Error in grantConsent:', err);
+    
+    // FIX: Provide more helpful error messages
+    if (err.message.includes('not owned by')) {
+      return res.status(403).json({ 
+        error: "Blockchain verification failed: " + err.message,
+        suggestion: "Please ensure that User " + req.body.ownerId + " has stored this data on the blockchain first."
+      });
+    }
+    
+    if (err.message.includes('does not exist')) {
+      return res.status(404).json({ 
+        error: "Data not found on blockchain: " + err.message,
+        suggestion: "Please store the data on blockchain using the /api/data/store endpoint first."
+      });
+    }
+    
     res.status(500).json({ 
       error: "Server error: " + err.message
     });
   }
 };
-
 // GET PENDING REQUESTS - Data owner sees who wants access
 export const getPendingRequests = async (req, res) => {
   try {

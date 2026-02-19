@@ -46,7 +46,9 @@ async function checkNetworkReadiness() {
 
 async function verifyContractDeployment() {
   try {
-    const code = await provider.getCode(CONTRACT_ADDRESS);
+    // FIX: Use checksummed address for verification too
+    const checksumAddress = ethers.getAddress(CONTRACT_ADDRESS);
+    const code = await provider.getCode(checksumAddress);
     if (code === '0x') {
       console.error('❌ CONTRACT NOT DEPLOYED: No contract found at address:', CONTRACT_ADDRESS);
       return false;
@@ -128,19 +130,23 @@ function validateUserId(userId, functionName = "function") {
 
 // Get signer by USER ID (not account index)
 async function getSignerByUserId(userId) {
-  const accounts = await getAccounts();
   const userInt = validateUserId(userId, "getSignerByUserId");
 
-  const account = accounts.find(acc => acc.userId === userInt);
+  // Hardhat gives unlocked accounts
+  const accounts = await provider.send("eth_accounts", []);
 
-  if (!account) {
-    throw new Error(`No account mapped for user ID ${userId}`);
+  const address = accounts[userInt - 1];
+
+  if (!address) {
+    throw new Error(`No Hardhat account for user ${userInt}`);
   }
 
-  console.log(`🔐 Using Hardhat signer for User ${userInt}: ${account.address}`);
+  console.log(`🔐 Using Hardhat unlocked signer for User ${userInt}: ${address}`);
 
-  return account.wallet; // ✅ RETURN HARDHAT SIGNER
+  return provider.getSigner(address);
 }
+
+
 
 // Get signer by account index (for backward compatibility)
 async function getSigner(index = 0) {
@@ -160,6 +166,7 @@ async function getSigner(index = 0) {
 }
 
 // Get contract with user ID (preferred method)
+// Get contract with user ID (preferred method) - FIXED
 async function getContractByUserId(userId) {
   if (!isContractVerified) {
     const isDeployed = await verifyContractDeployment();
@@ -169,10 +176,12 @@ async function getContractByUserId(userId) {
   }
   
   const signer = await getSignerByUserId(userId);
-  return new ethers.Contract(CONTRACT_ADDRESS, abi, signer);
+  // FIX: Convert address to checksummed format to prevent ENS resolution
+  const checksumAddress = ethers.getAddress(CONTRACT_ADDRESS);
+  return new ethers.Contract(checksumAddress, abi, signer);
 }
 
-// Get contract with account index (for backward compatibility)
+// Get contract with account index (for backward compatibility) - FIXED
 async function getContract(signerIndex = 0) {
   if (!isContractVerified) {
     const isDeployed = await verifyContractDeployment();
@@ -182,7 +191,9 @@ async function getContract(signerIndex = 0) {
   }
   
   const signer = await getSigner(signerIndex);
-  return new ethers.Contract(CONTRACT_ADDRESS, abi, signer);
+  // FIX: Convert address to checksummed format to prevent ENS resolution
+  const checksumAddress = ethers.getAddress(CONTRACT_ADDRESS);
+  return new ethers.Contract(checksumAddress, abi, signer);
 }
 
 function stringToBytes32(str) {
@@ -476,87 +487,33 @@ function debugUserIds(ownerUserId, requesterUserId, source = "unknown") {
 }
 
 // Store data on blockchain using USER ID - UPDATED WITH RETRY LOGIC
-async function storeDataOnBlockchain(data, userId) {
-  let retryCount = 0;
-  const maxRetries = 2;
-  
-  while (retryCount <= maxRetries) {
-    try {
-      console.log(`🔧 storeDataOnBlockchain attempt ${retryCount + 1} with:`, { data, userId });
-      
-      const userIdInt = validateUserId(userId, "storeDataOnBlockchain");
-      
-      // Ensure accounts funded on each attempt
-      await ensureAccountsFunded();
-      
-      const contract = await getContractByUserId(userIdInt);
-      const accounts = await getAccounts();
-      const userAccount = accounts.find(acc => acc.userId === userIdInt);
-      
-      if (!userAccount) {
-        throw new Error(`No account mapped for user ID ${userIdInt}. Available users: 1-${accounts.length}`);
-      }
-      
-      // Check balance with more detailed logging
-      const balance = await provider.getBalance(userAccount.address);
-      console.log(`💰 User ${userIdInt} balance: ${ethers.formatEther(balance)} ETH`);
-      
-      if (balance === 0n) {
-        if (retryCount < maxRetries) {
-          console.log(`🔄 Account has 0 balance, retrying after funding... (attempt ${retryCount + 1})`);
-          retryCount++;
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-          continue;
-        }
-        throw new Error(`Account for User ${userIdInt} has 0 ETH balance after ${maxRetries} retries.`);
-      }
-      
-      const dataHash = stringToBytes32(data);
-      
-      console.log(`💾 Storing data for User ${userIdInt}`);
-      console.log(`🔑 Data hash: ${dataHash}`);
-      console.log(`👤 Stored by: ${userAccount.address} (User ${userIdInt} → Account ${userAccount.index})`);
-      
-      console.log(`⏳ Storing data on blockchain...`);
-      
-      try {
-        const gasEstimate = await contract.storeData.estimateGas(dataHash);
-        console.log(`⛽ Estimated gas: ${gasEstimate}`);
-        
-        const tx = await contract.storeData(dataHash);
-        console.log(`📝 Transaction sent: ${tx.hash}`);
-        
-        const receipt = await tx.wait();
-        
-        console.log(`✅ Data stored successfully. Transaction: ${receipt.hash}`);
-        
-        return {
-          transactionHash: receipt.hash,
-          data: data,
-          dataHash: dataHash,
-          owner: userAccount.address,
-          storedBy: userAccount.address,
-          userId: userIdInt,
-          accountIndex: userAccount.index
-        };
-      } catch (txError) {
-        if (txError.reason?.includes('already exists') || txError.reason?.includes('already stored')) {
-          throw new Error(`Data already exists on blockchain. Hash: ${dataHash}`);
-        }
-        throw txError;
-      }
-    } catch (error) {
-      if (retryCount < maxRetries) {
-        console.log(`🔄 Error encountered, retrying... (attempt ${retryCount + 1}):`, error.message);
-        retryCount++;
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } else {
-        console.error('❌ Error storing data on blockchain after retries:', error);
-        throw error;
-      }
-    }
+async function storeDataOnBlockchain(dataHash, userId) {
+  try {
+    const userIdInt = validateUserId(userId, "storeDataOnBlockchain");
+
+    await ensureAccountsFunded();
+
+    const contract = await getContractByUserId(userIdInt);
+
+    console.log("🧾 Storing hash:", dataHash);
+
+    const tx = await contract.storeData(dataHash);
+    const receipt = await tx.wait();
+
+    console.log("✅ Stored by:", await contract.runner.getAddress());
+
+    return {
+      transactionHash: receipt.hash,
+      dataHash: dataHash,
+      userId: userIdInt
+    };
+
+  } catch (error) {
+    console.error("❌ Error storing data on blockchain:", error);
+    throw error;
   }
 }
+
 
 // Grant consent using USER IDs - UPDATED WITH BETTER VALIDATION AND DEBUGGING
 async function grantConsentOnBlockchain(dataHashFromDB, requesterUserId, ownerUserId) {

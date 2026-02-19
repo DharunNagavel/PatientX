@@ -15,7 +15,7 @@ const Consent = ({ user_id }) => {
 
       console.log(`📋 Fetching pending requests for owner: ${user_id}`);
       
-      const response = await fetch(`https://patientx.onrender.com/api/block/data/pending-requests/${user_id}`);
+      const response = await fetch(`http://localhost:9000/api/block/data/pending-requests/${user_id}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch pending requests');
@@ -68,7 +68,7 @@ const Consent = ({ user_id }) => {
         throw new Error('User ID not available');
       }
 
-      const response = await fetch('https://patientx.onrender.com/api/block/data/grant-consent', {
+      const response = await fetch('http://localhost:9000/api/block/data/grant-consent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -114,7 +114,7 @@ const Consent = ({ user_id }) => {
         throw new Error('User ID not available');
       }
 
-      const response = await fetch('https://patientx.onrender.com/api/block/data/decline-consent', {
+      const response = await fetch('http://localhost:9000/api/block/data/decline-consent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

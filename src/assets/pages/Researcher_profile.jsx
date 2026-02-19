@@ -39,7 +39,7 @@ const Researcher_profile = ({user_id}) => {
 }, []);
 const fetchSavedStudies = async () => {
   try {
-    const res = await axios.get(`https://patientx.onrender.com/api/get-research/${user_id}`);
+    const res = await axios.get(`http://localhost:9000/api/get-research/${user_id}`);
     setSavedStudies(res.data.research || []);
   } catch (err) {
     console.error("Failed to fetch studies", err);
@@ -52,7 +52,7 @@ const handleStudySubmit = async (e) => {
   e.preventDefault();
 
   try {
-    const res = await axios.post("https://patientx.onrender.com/api/add-research", {
+    const res = await axios.post("http://localhost:9000/api/add-research", {
       user_id: user_id,  // Must be passed as prop
       newStudy: newStudy,
     });

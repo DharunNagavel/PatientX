@@ -15,7 +15,7 @@ const Researcher_records = ({user_id}) => {
       setLoading(true);
       console.log("🔍 Fetching real records from database...");
 
-      const response = await fetch("https://patientx.onrender.com/api/records");
+      const response = await fetch("http://localhost:9000/api/records");
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

@@ -32,7 +32,7 @@ const Signup = ({setrole,setuser_id}) => {
 
   try {
     // Send data with correct field names for backend
-    const res = await axios.post("https://patientx.onrender.com/api/auth/signup", {
+    const res = await axios.post("http://localhost:9000/api/auth/signup", {
       username: formData.name,     // Backend expects 'username'
       mail: formData.email,        // Backend expects 'mail'
       password: formData.password,

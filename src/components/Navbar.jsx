@@ -33,38 +33,40 @@ const Navbar = ({ role }) => {
     window.location.reload();
   };
 
-  const patientMenuItems = [
-    { name: "Home", path: "/" },
-    { name: "Records", path: "/records" },
-    { name: "Research", path: "/research" },
-    { name: "Consent", path: "/consent" },
-    { name: "Profile", path: "/profile" },
-  ];
-
-  const researcherMenuItems = [
-    { name: "Home", path: "/" },
-    { name: "Records", path: "/researcher_records" },
-    { name: "Consent", path: "/researcher_consent" },
-    { name: "Profile", path: "/researcher_profile" },
-  ];
-
-  const defaultMenuItems = [
-    { name: "Home", path: "/" },
-    { name: "Records", path: "/records" },
-    { name: "Researcher", path: "/research" },
-    ...(role === "Researcher"
-      ? [{ name: "Consent", path: "/researcher_consent" }]
-      : [{ name: "Consent", path: "/consent" }]),
-    { name: "Signup", path: "/signup" },
-  ];
-
   const getMenuItems = () => {
-    if (!isLoggedIn) return defaultMenuItems;
-    if (currentRole === "Patient") return patientMenuItems;
-    if (currentRole === "Researcher") return researcherMenuItems;
-    return defaultMenuItems;
-  };
-
+  if (!isLoggedIn) {
+    // For non-logged in users, show all options including signup
+    return [
+      { name: "Home", path: "/" },
+      { name: "Records", path: "/login" },
+      { name: "Research", path: "/login" },
+      { name: "Consent", path: "/login" },
+      { name: "Signup", path: "/signup" },
+    ];
+  }
+  
+  if (currentRole === "Patient") {
+    return [
+      { name: "Home", path: "/" },
+      { name: "Records", path: "/records" },
+      { name: "Research", path: "/research" },
+      { name: "Consent", path: "/consent" },
+      // { name: "Profile", path: "/profile" },
+    ];
+  }
+  
+  if (currentRole === "Researcher") {
+    return [
+      { name: "Home", path: "/" },
+      { name: "Records", path: "/researcher_records" },
+      { name: "Consent", path: "/researcher_consent" },
+      // { name: "Profile", path: "/researcher_profile" },
+    ];
+  }
+  
+  // Fallback
+  return [];
+};
   const menuItems = getMenuItems();
 
   return (
@@ -87,6 +89,12 @@ const Navbar = ({ role }) => {
           <h1 className="text-xl font-bold text-blue-400 tracking-wide">
             PatientX
           </h1>
+          {/* Show current role badge only when logged in */}
+          {isLoggedIn && (
+            <span className="text-xs bg-white text-blue-500 px-2 py-1 rounded-full font-semibold">
+              {currentRole}
+            </span>
+          )}
         </div>
 
         <ul className="hidden lg:flex gap-8 items-center font-medium text-gray-300">

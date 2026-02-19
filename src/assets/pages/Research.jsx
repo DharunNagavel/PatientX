@@ -8,7 +8,7 @@ const Research = () => {
   useEffect(() => {
     const fetchResearchers = async () => {
       try {
-        const response = await fetch("https://patientx.onrender.com/api/researchersdata");
+        const response = await fetch("http://localhost:9000/api/researchersdata");
         if (!response.ok) {
           throw new Error("Failed to fetch researchers");
         }

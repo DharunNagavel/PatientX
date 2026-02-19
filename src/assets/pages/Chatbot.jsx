@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {  AnimatePresence } from 'framer-motion';
+import {  motion,AnimatePresence } from 'framer-motion';
 import { MessageCircle, X, Send, Bot } from 'lucide-react';
 
 const Chatbot = () => {
