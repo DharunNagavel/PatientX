@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import {  AnimatePresence } from 'framer-motion';
 import { MessageCircle, X, Send, Bot } from 'lucide-react';
 
 const Chatbot = () => {
@@ -40,7 +40,7 @@ const Chatbot = () => {
   setInputMessage("");
 
   // Call backend
-  fetch("https://patientx-ai.onrender.com/chatbot", {
+  fetch("http://localhost:5000/chatbot", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message: msg })
@@ -55,7 +55,7 @@ const Chatbot = () => {
       };
       setMessages(prev => [...prev, botMessage]);
     })
-    .catch(err => {
+    .catch(() => {
       const botMessage = {
         id: Date.now() + 1,
         text: "⚠️ Server error. Try again later.",

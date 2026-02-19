@@ -74,7 +74,7 @@ const Consent = ({ user_id }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ownerId: user_id, // Use the current user_id from props
+          ownerId: notification.backendData.ownerId, 
           requestId: notification.backendData.requestId
         }),
       });
@@ -121,7 +121,7 @@ const Consent = ({ user_id }) => {
         },
         body: JSON.stringify({
           requestId: notification.backendData.requestId,
-          ownerId: user_id // Use the current user_id from props
+          ownerId: notification.backendData.ownerId // Use the current user_id from props
         }),
       });
 
@@ -156,7 +156,7 @@ const Consent = ({ user_id }) => {
       setError("User ID not available. Please log in again.");
       setLoading(false);
     }
-  }, [user_id]); // Add user_id as dependency
+  }, []); // Add user_id as dependency
 
   if (loading) {
     return (

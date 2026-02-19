@@ -241,10 +241,11 @@ export const grantConsent = async (req, res) => {
 
     // 4. Grant consent on blockchain - pass USER IDs, not addresses or indexes
     const blockchainResult = await grantConsentOnBlockchain(
-      record.data_value, 
-      requesterIdInt,  // Pass requester USER ID
-      ownerIdInt       // Pass owner USER ID (not account index!)
+    record.data_hash,   // ✅ USE DB STORED HASH
+    requesterIdInt,
+    ownerIdInt
     );
+
 
     // 5. Update consent request status
     await pool.query(

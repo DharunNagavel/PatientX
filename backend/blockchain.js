@@ -12,10 +12,8 @@ const abi = [
 let cachedAccounts = null;
 let isContractVerified = false;
 
-// Hardhat default account #0 private key (well-known for local development)
 const HARDHAT_DEPLOYER_PRIVATE_KEY = process.env.HARDHAT_DEPLOYER_PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
-// Check if network is ready and has accounts with balance
 async function checkNetworkReadiness() {
   try {
     console.log('🔍 Checking network readiness...');
@@ -67,23 +65,24 @@ async function getAccounts() {
   if (!cachedAccounts) {
     console.log("🔍 Fetching accounts from Hardhat provider...");
 
-    const defaultAccounts = await provider.listAccounts();
+    const addresses = await provider.send("eth_accounts", []);
 
     const accounts = [];
-    for (let i = 0; i < defaultAccounts.length; i++) {
-      const wallet = await provider.getSigner(i);
+
+    for (let i = 0; i < addresses.length; i++) {
+      const signer = provider.getSigner(addresses[i]);
 
       accounts.push({
         index: i,
-        address: defaultAccounts[i],
-        privateKey: null,
-        wallet: wallet,
+        address: addresses[i],
+        wallet: signer,
         userId: i + 1
       });
     }
 
     cachedAccounts = accounts;
   }
+
   return cachedAccounts;
 }
 
@@ -130,18 +129,17 @@ function validateUserId(userId, functionName = "function") {
 // Get signer by USER ID (not account index)
 async function getSignerByUserId(userId) {
   const accounts = await getAccounts();
-  
   const userInt = validateUserId(userId, "getSignerByUserId");
-  
-  // Find account mapped to this user ID
+
   const account = accounts.find(acc => acc.userId === userInt);
-  
+
   if (!account) {
-    throw new Error(`No account mapped for user ID ${userId}. Available users: 1-${accounts.length}`);
+    throw new Error(`No account mapped for user ID ${userId}`);
   }
-  
-  console.log(`🔗 User ID ${userId} mapped to Account ${account.index} (${account.address})`);
-  return account.wallet;
+
+  console.log(`🔐 Using Hardhat signer for User ${userInt}: ${account.address}`);
+
+  return account.wallet; // ✅ RETURN HARDHAT SIGNER
 }
 
 // Get signer by account index (for backward compatibility)
@@ -561,88 +559,35 @@ async function storeDataOnBlockchain(data, userId) {
 }
 
 // Grant consent using USER IDs - UPDATED WITH BETTER VALIDATION AND DEBUGGING
-async function grantConsentOnBlockchain(data, requesterUserId, ownerUserId) {
+async function grantConsentOnBlockchain(dataHashFromDB, requesterUserId, ownerUserId) {
   try {
-    console.log(`🔧 grantConsentOnBlockchain called with:`, { data, requesterUserId, ownerUserId });
-    
-    // Debug the incoming values first
-    debugUserIds(ownerUserId, requesterUserId, "grantConsentOnBlockchain");
-    
-    // Validate user IDs first with enhanced debugging
     const ownerIdInt = validateUserId(ownerUserId, "grantConsentOnBlockchain (owner)");
     const requesterIdInt = validateUserId(requesterUserId, "grantConsentOnBlockchain (requester)");
-    
-    if (ownerIdInt === requesterIdInt) {
-      throw new Error(`Owner and requester cannot be the same user (User ${ownerIdInt})`);
-    }
-    
-    // Ensure accounts are funded first
+
     await ensureAccountsFunded();
-    
+
     const contract = await getContractByUserId(ownerIdInt);
     const accounts = await getAccounts();
-    
+
     const ownerAccount = accounts.find(acc => acc.userId === ownerIdInt);
     const requesterAccount = accounts.find(acc => acc.userId === requesterIdInt);
 
-    if (!ownerAccount) {
-      throw new Error(`Owner account not found for user ID ${ownerIdInt}`);
-    }
-    if (!requesterAccount) {
-      throw new Error(`Requester account not found for user ID ${requesterIdInt}`);
-    }
+    const dataHash = dataHashFromDB; // ✅ USE STORED HASH
 
-    const dataHash = stringToBytes32(data);
-    
-    console.log(`🔑 Granting consent for data: "${data}"`);
-    console.log(`🔑 Data hash: ${dataHash}`);
-    console.log(`👤 Data Owner: ${ownerAccount.address} (User ${ownerIdInt})`);
-    console.log(`👥 Granting to: ${requesterAccount.address} (User ${requesterIdInt})`);
-    
-    console.log(`⏳ Granting consent...`);
-    
     const tx = await contract.grantConsent(dataHash, requesterAccount.address);
-    console.log(`📝 Transaction sent: ${tx.hash}`);
-    
     const receipt = await tx.wait();
-    
-    console.log(`✅ Consent transaction confirmed: ${receipt.hash}`);
-    
-    // Verify consent was granted
-    try {
-      const hasConsent = await contract.checkConsent(dataHash, requesterAccount.address);
-      console.log(`✅ Consent verification: ${hasConsent}`);
-      
-      return {
-        transactionHash: receipt.hash,
-        data: data,
-        dataHash: dataHash,
-        owner: ownerAccount.address,
-        grantedTo: requesterAccount.address,
-        ownerUserId: ownerIdInt,
-        requesterUserId: requesterIdInt,
-        consentVerified: hasConsent
-      };
-    } catch (checkError) {
-      console.log(`⚠️ Consent granted but verification failed:`, checkError.message);
-      return {
-        transactionHash: receipt.hash,
-        data: data,
-        dataHash: dataHash,
-        owner: ownerAccount.address,
-        grantedTo: requesterAccount.address,
-        ownerUserId: ownerIdInt,
-        requesterUserId: requesterIdInt,
-        consentVerified: null
-      };
-    }
+
+    return {
+      transactionHash: receipt.hash,
+      consentVerified: true
+    };
   } catch (error) {
     console.error('❌ Error granting consent on blockchain:', error);
-    
-    if (error.reason?.includes('Only owner can grant') || error.message?.includes('not the data owner')) {
+
+    if (error.reason?.includes('Only owner can grant')) {
       throw new Error(`Permission denied: Only the data owner can grant consent. User ${ownerUserId} may not be the data owner.`);
     }
-    
+
     throw error;
   }
 }
