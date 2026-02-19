@@ -9,133 +9,124 @@ const features = [
     title: "Data Ownership",
     description:
       "Patients have full control over their health data with secure encryption and blockchain-based consent.",
-    gradient: "from-[#0a2647] via-[#144272] to-[#205295]",
   },
   {
     title: "Privacy-Preserving Marketplace",
     description:
       "Sell anonymized health data safely using advanced privacy methods like differential privacy and federated learning.",
-    gradient: "from-[#144272] via-[#205295] to-[#78C6A3]",
   },
   {
     title: "AI-Driven Insights",
     description:
       "Receive research-backed health insights and personalized feedback directly from verified researchers.",
-    gradient: "from-[#205295] via-[#78C6A3] to-[#B6EADA]",
   },
   {
     title: "Data Monetization",
     description:
       "Earn tokens whenever your data contributes to medical research or AI model training.",
-    gradient: "from-[#78C6A3] via-[#205295] to-[#144272]",
   },
 ];
 
 const Home = () => {
   const sectionRef = useRef(null);
-  const cardRefs = useRef([]);
-  const ctxRef = useRef(null); 
+  const containerRef = useRef(null);
 
   const scrollToCards = () => {
     sectionRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useLayoutEffect(() => {
-    ScrollTrigger.getAll().forEach(trigger => trigger.kill());
-    
-    ctxRef.current = gsap.context(() => {
-      const totalCards = cardRefs.current.length;
+    const ctx = gsap.context(() => {
+      const sections = gsap.utils.toArray(".panel");
 
-      const tl = gsap.timeline({
+      gsap.to(sections, {
+        xPercent: -100 * (sections.length - 1),
+        ease: "none",
         scrollTrigger: {
           trigger: sectionRef.current,
-          start: "top top",
-          end: `+=${totalCards * 120}%`,
-          scrub: true,
           pin: true,
+          scrub: 1,
+          snap: 1 / (sections.length - 1),
+          end: () =>
+            "+=" + sectionRef.current.offsetWidth * sections.length,
         },
       });
+    });
 
-      cardRefs.current.forEach((card, i) => {
-        if (card && i < totalCards - 1) {
-          tl.to(
-            card,
-            {
-              yPercent: -100,
-              opacity: 0,
-              ease: "none",
-            },
-            i
-          );
-        }
-      });
-    }, sectionRef);
-
-    return () => {
-      if (ctxRef.current) {
-        ctxRef.current.revert();
-      }
-      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
-    };
+    return () => ctx.revert();
   }, []);
 
   return (
     <>
-      <section className="relative bg-blue-500 text-white min-h-screen flex items-center justify-center px-6 md:px-20 overflow-hidden">
-        <div className="max-w-7xl mx-auto grid md:grid-cols-2 items-center gap-10">
-          <div className="space-y-6">
-            <h1 className="text-4xl md:text-5xl font-bold leading-tight">
-              Empowering Patients to Own <br /> Their Health Data
+      {/* HERO */}
+      <section className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-[#020617] via-[#0B1120] to-[#0f172a] text-white overflow-hidden px-6 md:px-20">
+
+        <div className="absolute w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[120px] top-[-150px] left-[-150px]" />
+        <div className="absolute w-[400px] h-[400px] bg-cyan-500/20 rounded-full blur-[120px] bottom-[-150px] right-[-150px]" />
+
+        <div className="relative z-10 max-w-7xl mx-auto grid md:grid-cols-2 items-center gap-16">
+
+          <div className="space-y-8">
+            <h1 className="text-5xl md:text-6xl font-extrabold leading-tight">
+              Empowering Patients to Own <br />
+              <span className="text-blue-400">Their Health Data</span>
             </h1>
-            <p className="text-lg text-gray-200">
-              A secure, privacy-focused platform where you control, share, and
-              benefit from your medical data.
+
+            <p className="text-lg text-gray-300 max-w-xl">
+              A decentralized healthcare marketplace where patients control
+              and monetize medical data securely.
             </p>
-            <div className="flex gap-4 pt-4">
-              <button
-                onClick={scrollToCards}
-                className="bg-black hover:bg-white hover:text-black text-white font-semibold px-6 py-3 rounded-lg shadow-lg transition"
-              >
-                Get Started
-              </button>
-            </div>
+
+            <button
+              onClick={scrollToCards}
+              className="px-8 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 
+              text-white font-semibold transition shadow-lg shadow-blue-500/40"
+            >
+              Explore Features
+            </button>
           </div>
+
           <div className="flex justify-center md:justify-end">
             <img
               src="/image.png"
-              alt="Hero Illustration"
-              className="w-[420px] md:w-[520px] lg:w-[600px] object-contain"
-              loading="lazy"
+              alt="Blockchain Healthcare"
+              className="w-[420px] md:w-[520px] object-contain drop-shadow-[0_0_40px_rgba(59,130,246,0.4)]"
             />
           </div>
         </div>
       </section>
 
+      {/* FEATURES HORIZONTAL */}
       <section
         ref={sectionRef}
-        className="relative bg-black h-screen overflow-hidden"
+        className="relative h-screen bg-[#020617] overflow-hidden"
       >
-        {features.map((feature, index) => (
-          <div
-            key={index}
-            ref={(el) => (cardRefs.current[index] = el)}
-            className="absolute top-0 left-0 w-full h-full flex items-center justify-center"
-            style={{ zIndex: features.length - index }}
-          >
+        <div
+          ref={containerRef}
+          className="flex h-full"
+        >
+          {features.map((feature, index) => (
             <div
-              className={`w-[90%] md:w-[80%] max-w-5xl text-center text-white rounded-3xl border-4 bg-gradient-to-r ${feature.gradient} 
-              p-10 transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(120,198,163,0.5)]`}
-              style={{
-                borderImage: `linear-gradient(to right, #78C6A3, #205295) 1`,
-              }}
+              key={index}
+              className="panel min-w-full flex items-center justify-center px-10"
             >
-              <h2 className="text-4xl font-bold mb-4">{feature.title}</h2>
-              <p className="max-w-2xl mx-auto text-lg text-gray-100">
-                {feature.description}
-              </p>
+              <div
+                className="max-w-3xl text-center 
+                bg-white/5 backdrop-blur-xl 
+                border border-blue-500/20 
+                rounded-3xl p-16 text-white 
+                shadow-[0_0_60px_rgba(59,130,246,0.15)]"
+              >
+                <h2 className="text-4xl md:text-5xl font-bold mb-6 text-blue-400">
+                  {feature.title}
+                </h2>
+                <p className="text-lg text-gray-300 leading-relaxed">
+                  {feature.description}
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </section>
     </>
   );
