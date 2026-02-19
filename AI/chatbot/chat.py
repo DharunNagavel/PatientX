@@ -23,7 +23,7 @@ class CompleteHealthBot:
         # Initialize Gemini if API key provided
         if self.use_gemini:
             try:
-                genai.configure(api_key="AIzaSyAWML0tCrKUYBwNpVFpFl0_FSnDWHLP0o0")
+                genai.configure(api_key="AIzaSyC9YtWbSCbiPFI2BVX_y6rG-A7ZdIBa0UA")
                 self.model = genai.GenerativeModel('gemini-pro')
                 print("✅ Gemini AI initialized successfully!")
             except Exception as e:

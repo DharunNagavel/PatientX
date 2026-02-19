@@ -30,7 +30,7 @@ const handleAIPrice = async (files) => {
   });
 
   try {
-    const res = await axios.post("http://localhost:5001/predict-price", formData, {
+    const res = await axios.post("http://localhost:5000/predict-price", formData, {
       headers: { "Content-Type": "multipart/form-data" },
       timeout: 60000, // allow some time for large files
     });

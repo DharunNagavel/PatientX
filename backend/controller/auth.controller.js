@@ -26,7 +26,8 @@ export const signup = async (req, res) => {
       username : username,
       user_id: user.user_id
     });
-  } catch (err) {
+  } catch (err) 
+  {
     console.log(err);
   }
 };
