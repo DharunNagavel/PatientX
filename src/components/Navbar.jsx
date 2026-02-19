@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Menu, X, LogOut } from "lucide-react";
-import gsap from "gsap";
-import Logo from "/Logo.png";
+import Logo from "../assets/logo.png";
+import { gsap } from "gsap";
 
 const Navbar = ({ role }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -63,15 +63,7 @@ const Navbar = ({ role }) => {
     if (currentRole === "Patient") return patientMenuItems;
     if (currentRole === "Researcher") return researcherMenuItems;
     return defaultMenuItems;
-  }
-  if (currentRole === "Patient") {
-    return patientMenuItems;
-  }
-  if (currentRole === "Researcher") {
-    return researcherMenuItems;
-  }
-  return defaultMenuItems;
-};
+  };
 
   const menuItems = getMenuItems();
 
@@ -86,7 +78,6 @@ const Navbar = ({ role }) => {
     >
       <div className="max-w-7xl mx-auto px-6 flex justify-between items-center py-4">
 
-        {/* LOGO + TITLE */}
         <div className="flex items-center gap-3">
           <img
             src={Logo}
@@ -96,39 +87,18 @@ const Navbar = ({ role }) => {
           <h1 className="text-xl font-bold text-blue-400 tracking-wide">
             PatientX
           </h1>
-
-          {isLoggedIn && (
-            <span
-              className="text-xs bg-blue-500/20 text-blue-400 
-              px-3 py-1 rounded-full border border-blue-400/30"
-            >
-              {currentRole}
-            </span>
-          )}
         </div>
 
-        {/* DESKTOP MENU */}
         <ul className="hidden lg:flex gap-8 items-center font-medium text-gray-300">
           {menuItems.map((item, i) => (
             <li key={i}>
               <Link
                 to={item.path}
-                className={`relative group transition duration-300
-                ${
-                  location.pathname === item.path
-                    ? "text-blue-400"
-                    : "hover:text-blue-400"
+                className={`hover:text-blue-400 transition ${
+                  location.pathname === item.path ? "text-blue-400" : ""
                 }`}
               >
                 {item.name}
-                <span
-                  className={`absolute left-0 -bottom-1 h-[2px] bg-blue-400 transition-all duration-300
-                  ${
-                    location.pathname === item.path
-                      ? "w-full"
-                      : "w-0 group-hover:w-full"
-                  }`}
-                ></span>
               </Link>
             </li>
           ))}
@@ -150,7 +120,6 @@ const Navbar = ({ role }) => {
           )}
         </ul>
 
-        {/* MOBILE BUTTON */}
         <button
           className="lg:hidden text-blue-400"
           onClick={() => setIsOpen(!isOpen)}
@@ -159,7 +128,6 @@ const Navbar = ({ role }) => {
         </button>
       </div>
 
-      {/* MOBILE MENU */}
       <div
         ref={mobileMenuRef}
         className={`lg:hidden overflow-hidden h-0 opacity-0 
@@ -181,25 +149,6 @@ const Navbar = ({ role }) => {
               </Link>
             </li>
           ))}
-
-          {isLoggedIn && (
-            <li>
-              <button
-                onClick={() => {
-                  handleLogout();
-                  setIsOpen(false);
-                }}
-                className="flex items-center gap-2 
-                bg-blue-600/20 hover:bg-blue-600/40 
-                border border-blue-400/30 
-                px-4 py-2 rounded-lg text-blue-300 
-                transition text-sm mt-2"
-              >
-                <LogOut size={16} />
-                Logout
-              </button>
-            </li>
-          )}
         </ul>
       </div>
     </nav>
