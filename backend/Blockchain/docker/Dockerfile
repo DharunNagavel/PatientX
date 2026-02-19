@@ -1,0 +1,6 @@
+FROM ghcr.io/foundry-rs/foundry:latest
+
+EXPOSE 8545
+
+ENTRYPOINT ["anvil"]
+CMD ["--host", "0.0.0.0", "--port", "8545"]

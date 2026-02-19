@@ -24,53 +24,49 @@ const Chatbot = () => {
   }, [messages]);
 
   const handleSendMessage = (e) => {
-    e.preventDefault();
-    if (!inputMessage.trim()) return;
+  e.preventDefault();
+  if (!inputMessage.trim()) return;
 
-    // Add user message
-    const userMessage = {
-      id: Date.now(),
-      text: inputMessage,
-      sender: 'user',
-      timestamp: new Date()
-    };
+  const userMessage = {
+    id: Date.now(),
+    text: inputMessage,
+    sender: 'user',
+    timestamp: new Date()
+  };
 
-    setMessages(prev => [...prev, userMessage]);
-    setInputMessage('');
+  setMessages(prev => [...prev, userMessage]);
 
-    // Simulate bot response after a delay
-    setTimeout(() => {
-      const botResponse = {
+  const msg = inputMessage;
+  setInputMessage("");
+
+  // Call backend
+  fetch("https://patientx-ai.onrender.com/chatbot", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: msg })
+  })
+    .then(res => res.json())
+    .then(data => {
+      const botMessage = {
         id: Date.now() + 1,
-        text: getBotResponse(inputMessage),
-        sender: 'bot',
+        text: data.reply,
+        sender: "bot",
         timestamp: new Date()
       };
-      setMessages(prev => [...prev, botResponse]);
-    }, 1000);
-  };
+      setMessages(prev => [...prev, botMessage]);
+    })
+    .catch(err => {
+      const botMessage = {
+        id: Date.now() + 1,
+        text: "⚠️ Server error. Try again later.",
+        sender: "bot",
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, botMessage]);
+    });
+};
 
-  const getBotResponse = (userMessage) => {
-    const message = userMessage.toLowerCase();
-    
-    if (message.includes('hello') || message.includes('hi')) {
-      return "Hello! How can I assist you with PatientX today?";
-    } else if (message.includes('medical') || message.includes('record')) {
-      return "I can help you understand how to manage your medical records securely on our platform.";
-    } else if (message.includes('consent')) {
-      return "The consent system allows you to control who accesses your data. You can approve or decline research requests.";
-    } else if (message.includes('research') || message.includes('researcher')) {
-      return "Researchers can request access to anonymized data for medical studies while ensuring your privacy.";
-    } else if (message.includes('token') || message.includes('reward')) {
-      return "You earn tokens when researchers access your anonymized data. These can be used for various benefits.";
-    } else if (message.includes('help')) {
-      return "I can help with: medical records, consent management, research data, token rewards, and general platform questions.";
-    } else if (message.includes('thank')) {
-      return "You're welcome! Is there anything else I can help you with?";
-    } else {
-      return "I understand you're asking about: '" + userMessage + "'. For detailed assistance, please contact our support team at support@patientx.com";
-    }
-  };
+
 
   const toggleChat = () => {
     setIsOpen(!isOpen);

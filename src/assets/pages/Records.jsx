@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { gsap } from "gsap";
+import axios from "axios";
 
 const Records = ({ user_id }) => {
   const [records, setRecords] = useState([]);
@@ -12,9 +13,57 @@ const Records = ({ user_id }) => {
     notes: "",
     filesData: [],
     fileNames: [],
+    amount : ""
   });
 
   const cardsRef = useRef([]);
+
+  // inside Records component (only show relevant functions + file input usage)
+
+const handleAIPrice = async (files) => {
+  if (!files || files.length === 0) return;
+
+  const formData = new FormData();
+  files.forEach((file) => {
+    // IMPORTANT: append each file under the same field name "files"
+    formData.append("files", file);
+  });
+
+  try {
+    const res = await axios.post("https://patientx-ai.onrender.com/predict-price", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+      timeout: 60000, // allow some time for large files
+    });
+
+    if (res?.data?.success) {
+      // predicted_price is the SUM across files
+      setNewRecord((prev) => ({ ...prev, rate: res.data.predicted_price }));
+    } else {
+      console.error("AI response error:", res.data);
+    }
+  } catch (err) {
+    console.error("AI API error:", err);
+  }
+};
+
+const handleFileChange = (e) => {
+  const files = Array.from(e.target.files);
+  const fileNames = files.map((file) => file.name);
+
+  setNewRecord((prev) => ({
+    ...prev,
+    filesData: files,
+    files: files.length,
+    fileNames,
+  }));
+
+  // request AI price for the selected files
+  handleAIPrice(files);
+};
+
+
+
+
 
   // Fetch user's records when component mounts or user_id changes
   useEffect(() => {
@@ -43,7 +92,7 @@ const Records = ({ user_id }) => {
       setLoading(true);
       console.log(`🔄 Fetching records for user: ${user_id}`);
       
-      const response = await fetch(`http://localhost:9000/api/block/data/user/${user_id}`);
+      const response = await fetch(`https://patientx.onrender.com/api/block/data/user/${user_id}`);
       
       console.log('Response status:', response.status);
       
@@ -88,16 +137,6 @@ const Records = ({ user_id }) => {
     setNewRecord({ ...newRecord, [name]: value });
   };
 
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    const fileNames = files.map((file) => file.name);
-    setNewRecord({
-      ...newRecord,
-      filesData: files,
-      files: files.length,
-      fileNames,
-    });
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -126,19 +165,23 @@ const Records = ({ user_id }) => {
 
       const filesData = await Promise.all(filePromises);
 
-      // Prepare data for backend
+      const finalRate = parseInt(newRecord.rate) || 0;
+      const finalAmount = finalRate;
+
       const requestData = {
-        userId: user_id, 
+        userId: user_id,
         type: newRecord.type,
-        rate: newRecord.rate,
+        rate: finalRate,
+        amount: finalAmount,
         notes: newRecord.notes,
         files: filesData
       };
 
+
       console.log('Sending data to backend:', { ...requestData, files: filesData.length });
 
       // Send to backend
-      const response = await fetch('http://localhost:9000/api/block/data/storedata', {
+      const response = await fetch('https://patientx.onrender.com/api/block/data/storedata', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -165,6 +208,7 @@ const Records = ({ user_id }) => {
           notes: "",
           filesData: [],
           fileNames: [],
+          amount : ""
         });
         setShowModal(false);
       } else {
@@ -174,7 +218,7 @@ const Records = ({ user_id }) => {
       console.error('Error storing data:', error);
       alert('Failed to store medical record');
     }
-  };
+  };  
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -284,7 +328,7 @@ const Records = ({ user_id }) => {
               ✕
             </button>
             <h3 className="text-2xl font-bold mb-4">Add New Record</h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} encType="multipart/form-data" className="space-y-4">
               <div>
                 <label className="block mb-1">Type of Record</label>
                 <select
@@ -302,7 +346,7 @@ const Records = ({ user_id }) => {
                   <option value="Lab Test">Lab Test</option>
                   <option value="Other">Other</option>
                 </select>
-              </div>
+              </div>  
               <div>
                 <label className="block mb-1">Upload Files</label>
                 <input
@@ -322,15 +366,11 @@ const Records = ({ user_id }) => {
               <div>
                 <label className="block mb-1">Rate (₹)</label>
                 <input
-                  type="text"
+                  type="number"
+                  readOnly  
                   name="rate"
                   value={newRecord.rate}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (/^\d*$/.test(val)) {
-                      setNewRecord({ ...newRecord, rate: val });
-                    }
-                  }}
+                  onChange={(e) => setNewRecord({ ...newRecord, rate: e.target.value })}
                   placeholder="Enter rate in numbers"
                   required
                   className="w-full border border-gray-700 rounded-lg px-3 py-2 bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"

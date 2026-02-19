@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Menu, X, LogOut } from "lucide-react";
-import Logo from "../assets/logo.png";
-import { gsap } from "gsap";
+import gsap from "gsap";
+import Logo from "/Logo.png";
 
 const Navbar = ({ role }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -63,7 +63,15 @@ const Navbar = ({ role }) => {
     if (currentRole === "Patient") return patientMenuItems;
     if (currentRole === "Researcher") return researcherMenuItems;
     return defaultMenuItems;
-  };
+  }
+  if (currentRole === "Patient") {
+    return patientMenuItems;
+  }
+  if (currentRole === "Researcher") {
+    return researcherMenuItems;
+  }
+  return defaultMenuItems;
+};
 
   const menuItems = getMenuItems();
 
